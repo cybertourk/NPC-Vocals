@@ -576,6 +576,30 @@
       return new Blob([view], { type: 'audio/wav' });
     }
 
+    // Helper for Exponential Backoff on API rate limits
+    async function fetchWithRetry(url, options, maxRetries = 4) {
+      let delay = 1000;
+      for (let i = 0; i < maxRetries; i++) {
+        try {
+          const response = await fetch(url, options);
+          if (response.status === 429) { // 429 is the "Too Many Requests" Rate Limit error
+             console.warn(`Rate limited. Retrying in ${delay}ms...`);
+             await new Promise(resolve => setTimeout(resolve, delay));
+             delay *= 2; 
+             continue;
+          }
+          if (!response.ok) throw new Error(`API Error: ${response.status}`);
+          return response;
+        } catch (err) {
+          if (i === maxRetries - 1) throw err;
+          console.warn(`Fetch error. Retrying in ${delay}ms...`, err);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          delay *= 2;
+        }
+      }
+      throw new Error('Max retries reached');
+    }
+
     window.previewVoice = async function() {
       const voice = document.getElementById('npc-voice-input').value;
       const style = document.getElementById('npc-style-input').value;
@@ -603,7 +627,7 @@
       const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${activeKey}`;
       
       try {
-        const response = await fetch(apiUrl, {
+        const response = await fetchWithRetry(apiUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -615,7 +639,6 @@
           })
         });
 
-        if (!response.ok) throw new Error('API Error');
         const result = await response.json();
         const base64Audio = result?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
         if (!base64Audio) throw new Error('No audio');
@@ -664,7 +687,7 @@
       const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${activeKey}`;
       
       try {
-        const response = await fetch(apiUrl, {
+        const response = await fetchWithRetry(apiUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -676,7 +699,6 @@
           })
         });
 
-        if (!response.ok) throw new Error('API Error');
         const result = await response.json();
         const base64Audio = result?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
         if (!base64Audio) throw new Error('No audio');
