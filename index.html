@@ -195,8 +195,17 @@
     import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'voxsynth-studio-app';
-    const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'npc-vocals-app';
+    
+    // Your web app's Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyBgE67mktb0Ph-dF8L8HXdBK4q122vmyS8",
+      authDomain: "npc-vocals.firebaseapp.com",
+      projectId: "npc-vocals",
+      storageBucket: "npc-vocals.firebasestorage.app",
+      messagingSenderId: "309649053559",
+      appId: "1:309649053559:web:6e5ace4703980677ccf372"
+    };
     
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
