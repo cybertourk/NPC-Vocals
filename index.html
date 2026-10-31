@@ -41,13 +41,13 @@
     </div>
 
     <!-- Campaigns List -->
-    <div class="flex-1 overflow-y-auto p-3 space-y-4 scrollbar-hide" id="campaigns-container">
+    <div class="flex-1 overflow-y-auto p-2 space-y-1 scrollbar-hide" id="folders-container">
       <!-- Populated by JS -->
     </div>
 
     <div class="p-3 border-t border-slate-800">
-      <button onclick="promptNewCampaign()" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-sky-400 text-xs font-bold rounded-lg border border-slate-700 transition">
-        + New Campaign
+      <button onclick="promptNewFolder(null)" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-sky-400 text-xs font-bold rounded-lg border border-slate-700 transition">
+        + New Root Folder
       </button>
     </div>
   </aside>
@@ -214,11 +214,11 @@
 
     // --- STATE MANAGEMENT ---
     let appState = {
-      campaigns: [],
+      folders: [],
       npcs: [],
       lines: [],
-      activeCampaignId: null,
-      activeNpcId: null
+      activeNpcId: null,
+      expandedFolders: {}
     };
 
     const defaultApiKey = ""; 
@@ -249,9 +249,9 @@
     function setupSubscriptions() {
       if (!userId) return;
 
-      const campaignsRef = collection(db, 'artifacts', appId, 'users', userId, 'campaigns');
-      onSnapshot(campaignsRef, (snap) => {
-        appState.campaigns = snap.docs.map(d => d.data()).sort((a,b) => a.createdAt - b.createdAt);
+      const foldersRef = collection(db, 'artifacts', appId, 'users', userId, 'folders');
+      onSnapshot(foldersRef, (snap) => {
+        appState.folders = snap.docs.map(d => d.data()).sort((a,b) => a.createdAt - b.createdAt);
         renderSidebar();
         renderWorkspace();
       }, (err) => console.error(err));
@@ -282,60 +282,114 @@
 
     // --- UI RENDER FUNCTIONS ---
     function renderSidebar() {
-      const container = document.getElementById('campaigns-container');
+      const container = document.getElementById('folders-container');
+      if (!container) return;
       container.innerHTML = '';
-
-      appState.campaigns.forEach(camp => {
-        const campDiv = document.createElement('div');
-        campDiv.className = 'mb-4';
-        
-        campDiv.innerHTML = `
-          <div class="flex items-center justify-between text-xs font-bold text-slate-300 uppercase tracking-wider mb-2 px-2">
-            <span>${escapeHtml(camp.name)}</span>
-            <button onclick="deleteCampaign('${camp.id}')" class="text-slate-600 hover:text-rose-400 p-1" title="Delete Campaign">✕</button>
-          </div>
-          <div class="space-y-1" id="npc-list-${camp.id}"></div>
-          <button onclick="promptNewNPC('${camp.id}')" class="w-full mt-2 py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-sky-400 text-xs rounded border border-slate-800 border-dashed transition flex items-center justify-center gap-1">
-            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg> Add NPC
-          </button>
-        `;
-        container.appendChild(campDiv);
-
-        const npcList = document.getElementById(`npc-list-${camp.id}`);
-        const campNpcs = appState.npcs.filter(n => n.campaignId === camp.id);
-        
-        campNpcs.forEach(npc => {
-          const isActive = npc.id === appState.activeNpcId;
-          const btn = document.createElement('button');
-          btn.className = `w-full text-left px-3 py-2 rounded-lg text-sm transition flex items-center gap-2 ${isActive ? 'bg-sky-500/20 text-sky-400 font-medium border border-sky-500/30' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'}`;
-          btn.innerHTML = `<svg class="w-4 h-4 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg> <span class="truncate">${escapeHtml(npc.name)}</span>`;
-          btn.onclick = () => selectNpc(camp.id, npc.id);
-          npcList.appendChild(btn);
-        });
+      
+      const roots = appState.folders.filter(f => !f.parentId).sort((a,b) => a.createdAt - b.createdAt);
+      roots.forEach(r => {
+        container.appendChild(createFolderElement(r, 0));
       });
     }
 
-    window.selectNpc = function(campId, npcId) {
-      appState.activeCampaignId = campId;
+    function createFolderElement(folder, depth) {
+      const div = document.createElement('div');
+      div.className = 'w-full';
+      const isExpanded = appState.expandedFolders[folder.id];
+      const padding = depth * 12 + 8; 
+      
+      const header = document.createElement('div');
+      header.className = `group flex items-center justify-between py-2 pr-2 hover:bg-slate-800 rounded cursor-pointer text-slate-300 transition-colors`;
+      header.style.paddingLeft = `${padding}px`;
+      
+      header.innerHTML = `
+        <div class="flex items-center gap-2 overflow-hidden flex-1" onclick="toggleFolder('${folder.id}')">
+          <svg class="w-3.5 h-3.5 flex-shrink-0 transition-transform ${isExpanded ? 'rotate-90' : ''}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+          <svg class="w-4 h-4 text-sky-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20"><path d="M2 6a2 2 0 012-2h4l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6z"></path></svg>
+          <span class="text-xs font-bold truncate">${escapeHtml(folder.name)}</span>
+        </div>
+        <div class="hidden group-hover:flex items-center gap-0.5 flex-shrink-0 bg-slate-800 rounded pl-1">
+          <button onclick="promptNewFolder('${folder.id}')" class="p-1 hover:text-sky-400 transition" title="Add Subfolder"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path></svg></button>
+          <button onclick="promptNewNPC('${folder.id}')" class="p-1 hover:text-emerald-400 transition" title="Add NPC"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg></button>
+          <button onclick="deleteFolder('${folder.id}')" class="p-1 hover:text-rose-400 transition" title="Delete Folder"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
+        </div>
+      `;
+      div.appendChild(header);
+      
+      if (isExpanded) {
+        const childrenDiv = document.createElement('div');
+        childrenDiv.className = 'flex flex-col';
+        
+        const subFolders = appState.folders.filter(f => f.parentId === folder.id).sort((a,b) => a.createdAt - b.createdAt);
+        subFolders.forEach(sf => childrenDiv.appendChild(createFolderElement(sf, depth + 1)));
+        
+        const npcs = appState.npcs.filter(n => n.folderId === folder.id).sort((a,b) => a.createdAt - b.createdAt);
+        npcs.forEach(npc => {
+          const npcBtn = document.createElement('button');
+          const isActive = npc.id === appState.activeNpcId;
+          npcBtn.className = `w-full text-left py-1.5 pr-2 rounded-lg text-xs transition flex items-center gap-2 group ${isActive ? 'bg-sky-500/20 text-sky-400 font-medium' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'}`;
+          npcBtn.style.paddingLeft = `${padding + 24}px`;
+          npcBtn.innerHTML = `
+            <svg class="w-3.5 h-3.5 opacity-70 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+            <span class="truncate flex-1">${escapeHtml(npc.name)}</span>
+            <span onclick="deleteNPC(event, '${npc.id}')" class="hidden group-hover:block p-1 text-slate-500 hover:text-rose-400 flex-shrink-0" title="Delete NPC"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></span>
+          `;
+          npcBtn.onclick = (e) => {
+            if (e.target.closest('span[onclick]')) return; 
+            selectNpc(npc.id);
+          };
+          childrenDiv.appendChild(npcBtn);
+        });
+        
+        if (subFolders.length === 0 && npcs.length === 0) {
+           const empty = document.createElement('div');
+           empty.className = 'text-[10px] text-slate-600 italic py-1.5';
+           empty.style.paddingLeft = `${padding + 24}px`;
+           empty.innerText = 'Folder is empty';
+           childrenDiv.appendChild(empty);
+        }
+        
+        div.appendChild(childrenDiv);
+      }
+      return div;
+    }
+
+    window.toggleFolder = function(folderId) {
+      appState.expandedFolders[folderId] = !appState.expandedFolders[folderId];
+      renderSidebar();
+    };
+
+    window.selectNpc = function(npcId) {
       appState.activeNpcId = npcId;
       renderSidebar();
       renderWorkspace();
     };
 
+    function getFolderPath(folderId) {
+       const path = [];
+       let current = appState.folders.find(f => f.id === folderId);
+       while(current) {
+          path.unshift(current.name);
+          current = appState.folders.find(f => f.id === current.parentId);
+       }
+       return path.join(' / ');
+    }
+
     function renderWorkspace() {
-      const camp = appState.campaigns.find(c => c.id === appState.activeCampaignId);
       const npc = appState.npcs.find(n => n.id === appState.activeNpcId);
 
-      if (!npc || !camp) {
+      if (!npc) {
         document.getElementById('empty-state').classList.remove('hidden');
         document.getElementById('npc-workspace').classList.add('hidden');
         document.getElementById('active-npc-breadcrumb').innerText = 'Select an NPC to begin...';
         return;
       }
 
+      const folderPath = getFolderPath(npc.folderId);
+
       document.getElementById('empty-state').classList.add('hidden');
       document.getElementById('npc-workspace').classList.remove('hidden');
-      document.getElementById('active-npc-breadcrumb').innerText = `${camp.name} / ${npc.name}`;
+      document.getElementById('active-npc-breadcrumb').innerText = `${folderPath} / ${npc.name}`;
 
       document.getElementById('npc-name-input').value = npc.name;
       document.getElementById('npc-voice-input').value = npc.voice;
@@ -387,50 +441,83 @@
     window.saveNpcSettings = async function() {
       if (!userId || !appState.activeNpcId) return;
       const npcRef = doc(db, 'artifacts', appId, 'users', userId, 'npcs', appState.activeNpcId);
+      const existingNpc = appState.npcs.find(n => n.id === appState.activeNpcId);
       
       await setDoc(npcRef, {
         id: appState.activeNpcId,
-        campaignId: appState.activeCampaignId,
+        folderId: existingNpc.folderId,
         name: document.getElementById('npc-name-input').value,
         voice: document.getElementById('npc-voice-input').value,
         style: document.getElementById('npc-style-input').value,
         pitch: parseFloat(document.getElementById('npc-pitch-input').value),
         rate: parseFloat(document.getElementById('npc-rate-input').value),
-        createdAt: appState.npcs.find(n => n.id === appState.activeNpcId).createdAt // Preserve sort order
+        createdAt: existingNpc.createdAt 
       }, { merge: true });
     };
 
-    window.promptNewCampaign = function() {
-      openInputModal('New Campaign Name', async (val) => {
+    window.promptNewFolder = function(parentId = null) {
+      openInputModal(parentId ? 'New Subfolder Name' : 'New Root Folder Name', async (val) => {
         if (!val || !userId) return;
         const newId = generateId();
-        const docRef = doc(db, 'artifacts', appId, 'users', userId, 'campaigns', newId);
-        await setDoc(docRef, { id: newId, name: val, createdAt: Date.now() });
+        const docRef = doc(db, 'artifacts', appId, 'users', userId, 'folders', newId);
+        await setDoc(docRef, { id: newId, name: val, parentId: parentId, createdAt: Date.now() });
+        appState.expandedFolders[newId] = true;
+        if (parentId) appState.expandedFolders[parentId] = true;
       });
     };
 
-    window.deleteCampaign = async function(campId) {
-      if (!userId) return;
-      // In a full app you might delete the NPCs and Lines inside too. Here we just delete the parent.
-      await deleteDoc(doc(db, 'artifacts', appId, 'users', userId, 'campaigns', campId));
-      if (appState.activeCampaignId === campId) {
-        appState.activeCampaignId = null;
+    window.deleteFolder = async function(folderId) {
+      if (!userId || !confirm("Are you sure? This will delete the folder and ALL subfolders, NPCs, and voice lines inside it!")) return;
+      
+      const docsToDelete = [];
+      function gatherDocs(fid) {
+        docsToDelete.push(doc(db, 'artifacts', appId, 'users', userId, 'folders', fid));
+        appState.folders.filter(f => f.parentId === fid).forEach(f => gatherDocs(f.id));
+        appState.npcs.filter(n => n.folderId === fid).forEach(n => {
+          docsToDelete.push(doc(db, 'artifacts', appId, 'users', userId, 'npcs', n.id));
+          appState.lines.filter(l => l.npcId === n.id).forEach(l => {
+            docsToDelete.push(doc(db, 'artifacts', appId, 'users', userId, 'lines', l.id));
+          });
+        });
+      }
+      
+      gatherDocs(folderId);
+      for(let ref of docsToDelete) await deleteDoc(ref);
+      
+      if (appState.activeNpcId && !appState.npcs.find(n => n.id === appState.activeNpcId)) {
         appState.activeNpcId = null;
         renderWorkspace();
       }
     };
 
-    window.promptNewNPC = function(campId) {
+    window.promptNewNPC = function(folderId) {
       openInputModal('New NPC Name', async (val) => {
         if (!val || !userId) return;
         const newId = generateId();
         const docRef = doc(db, 'artifacts', appId, 'users', userId, 'npcs', newId);
         await setDoc(docRef, { 
-          id: newId, campaignId: campId, name: val, 
+          id: newId, folderId: folderId, name: val, 
           voice: 'Kore', style: 'neutral', pitch: 1.0, rate: 1.0, createdAt: Date.now() 
         });
-        window.selectNpc(campId, newId);
+        appState.expandedFolders[folderId] = true;
+        window.selectNpc(newId);
       });
+    };
+
+    window.deleteNPC = async function(event, npcId) {
+      event.stopPropagation();
+      if (!userId || !confirm("Delete this NPC and all its voice lines?")) return;
+      
+      const lines = appState.lines.filter(l => l.npcId === npcId);
+      for (let l of lines) {
+        await deleteDoc(doc(db, 'artifacts', appId, 'users', userId, 'lines', l.id));
+      }
+      await deleteDoc(doc(db, 'artifacts', appId, 'users', userId, 'npcs', npcId));
+      
+      if (appState.activeNpcId === npcId) {
+        appState.activeNpcId = null;
+        renderWorkspace();
+      }
     };
 
     window.deleteLine = async function(lineId) {
