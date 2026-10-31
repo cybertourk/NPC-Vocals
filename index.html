@@ -647,25 +647,41 @@
     // Helper for Exponential Backoff on API rate limits
     async function fetchWithRetry(url, options, maxRetries = 4) {
       let delay = 1000;
+      let lastResponse = null;
+      
       for (let i = 0; i < maxRetries; i++) {
         try {
           const response = await fetch(url, options);
+          lastResponse = response;
+          
           if (response.status === 429) { 
              console.warn(`Rate limited. Retrying in ${delay}ms...`);
              await new Promise(resolve => setTimeout(resolve, delay));
              delay *= 2; 
              continue;
           }
-          if (!response.ok) throw new Error(`API Error: ${response.status}`);
+          
+          if (!response.ok) {
+             const errorData = await response.json().catch(() => ({}));
+             throw new Error(errorData.error?.message || `API Error ${response.status}`);
+          }
+          
           return response;
         } catch (err) {
-          if (i === maxRetries - 1) throw err;
+          if (i === maxRetries - 1) {
+             // If we failed all retries and it was a 429, extract the real Google error
+             if (lastResponse && lastResponse.status === 429) {
+                 const errorData = await lastResponse.json().catch(() => ({}));
+                 throw new Error(errorData.error?.message || "Rate limit exceeded (You may have hit your 1,500 daily request limit).");
+             }
+             throw err;
+          }
           console.warn(`Fetch error. Retrying in ${delay}ms...`, err);
           await new Promise(resolve => setTimeout(resolve, delay));
           delay *= 2;
         }
       }
-      throw new Error('Max retries reached');
+      throw new Error('Max retries reached.');
     }
 
     // Constructs the complex hidden prompt based on Race and Style
@@ -728,7 +744,7 @@
 
         const result = await response.json();
         const base64Audio = result?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-        if (!base64Audio) throw new Error('No audio');
+        if (!base64Audio) throw new Error('No audio returned from Google.');
 
         const effectiveSampleRate = Math.round(24000 * (1 / rate) * pitch); 
         const binaryStr = atob(base64Audio);
@@ -738,7 +754,7 @@
         
         playAudio(URL.createObjectURL(wavBlob));
       } catch (err) {
-        alert("Failed to preview voice. Please check your API key.");
+        alert(`Failed to preview voice:\n\n${err.message}`);
       } finally {
         btn.innerHTML = originalHtml;
         btn.disabled = false;
@@ -781,7 +797,7 @@
 
         const result = await response.json();
         const base64Audio = result?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-        if (!base64Audio) throw new Error('No audio');
+        if (!base64Audio) throw new Error('No audio returned from Google.');
 
         const effectiveSampleRate = Math.round(24000 * (1 / npc.rate) * npc.pitch); 
 
@@ -800,7 +816,7 @@
         document.getElementById('tts-input').value = '';
 
       } catch (err) {
-        alert("Failed to generate voice. Please check API key.");
+        alert(`Failed to generate voice:\n\n${err.message}`);
       } finally {
         btn.innerHTML = originalHtml;
         btn.disabled = false;
