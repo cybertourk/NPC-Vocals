@@ -96,18 +96,25 @@
             </div>
             <div>
               <label class="block text-xs font-medium text-slate-400 uppercase mb-1">Voice Model</label>
-              <select id="npc-voice-input" class="w-full rounded-xl bg-slate-900 border border-slate-700 p-2.5 text-sm text-slate-100 focus:outline-none focus:border-sky-400">
-                <option value="Kore">Kore — Firm</option>
-                <option value="Zephyr">Zephyr — Bright</option>
-                <option value="Orus">Orus — Deep, Firm</option>
-                <option value="Charon">Charon — Deep, Informative</option>
-                <option value="Puck">Puck — Upbeat</option>
-                <option value="Aoede">Aoede — Breezy</option>
-                <option value="Fenrir">Fenrir — Bold</option>
-                <option value="Algenib">Algenib — Gravelly</option>
-                <option value="Vindemiatrix">Vindemiatrix — Gentle</option>
-                <option value="Gacrux">Gacrux — Mature</option>
-              </select>
+              <div class="flex gap-2">
+                <select id="npc-voice-input" class="flex-1 rounded-xl bg-slate-900 border border-slate-700 p-2.5 text-sm text-slate-100 focus:outline-none focus:border-sky-400">
+                  <option value="Kore">Kore — Firm</option>
+                  <option value="Zephyr">Zephyr — Bright</option>
+                  <option value="Orus">Orus — Deep, Firm</option>
+                  <option value="Charon">Charon — Deep, Informative</option>
+                  <option value="Puck">Puck — Upbeat</option>
+                  <option value="Aoede">Aoede — Breezy</option>
+                  <option value="Fenrir">Fenrir — Bold</option>
+                  <option value="Algenib">Algenib — Gravelly</option>
+                  <option value="Vindemiatrix">Vindemiatrix — Gentle</option>
+                  <option value="Gacrux">Gacrux — Mature</option>
+                  <option value="Leda">Leda — Ethereal</option>
+                  <option value="Callisto">Callisto — Sharp</option>
+                </select>
+                <button onclick="previewVoice()" class="px-3 bg-slate-800 hover:bg-slate-700 text-sky-400 rounded-xl border border-slate-700 transition flex items-center justify-center" title="Preview Voice">
+                  <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
+                </button>
+              </div>
             </div>
             <div>
               <label class="block text-xs font-medium text-slate-400 uppercase mb-1">Default Delivery</label>
@@ -568,6 +575,65 @@
       }
       return new Blob([view], { type: 'audio/wav' });
     }
+
+    window.previewVoice = async function() {
+      const voice = document.getElementById('npc-voice-input').value;
+      const style = document.getElementById('npc-style-input').value;
+      const pitch = parseFloat(document.getElementById('npc-pitch-input').value);
+      const rate = parseFloat(document.getElementById('npc-rate-input').value);
+
+      const activeKey = getActiveApiKey();
+      if (!activeKey) {
+        document.getElementById('api-modal').classList.remove('hidden');
+        return;
+      }
+
+      const btn = document.querySelector('button[onclick="previewVoice()"]');
+      const originalHtml = btn.innerHTML;
+      btn.innerHTML = `<svg class="w-4 h-4 animate-spin text-sky-400" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
+      btn.disabled = true;
+
+      let promptPrefix = "I am ready.";
+      if (style === 'cheerful') promptPrefix = "Hi there! I am ready.";
+      else if (style === 'whisper') promptPrefix = "I am here... ready.";
+      else if (style === 'dramatic') promptPrefix = "Behold. I am ready.";
+      else if (style === 'angry') promptPrefix = "I am ready! Let's go!";
+      else if (style === 'bored') promptPrefix = "Whatever... I am ready.";
+
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${activeKey}`;
+      
+      try {
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: promptPrefix }] }],
+            generationConfig: {
+              responseModalities: ["AUDIO"],
+              speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } }
+            }
+          })
+        });
+
+        if (!response.ok) throw new Error('API Error');
+        const result = await response.json();
+        const base64Audio = result?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+        if (!base64Audio) throw new Error('No audio');
+
+        const effectiveSampleRate = Math.round(24000 * (1 / rate) * pitch); 
+        const binaryStr = atob(base64Audio);
+        const bytes = new Uint8Array(binaryStr.length);
+        for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+        const wavBlob = pcmToWav(bytes.buffer, effectiveSampleRate);
+        
+        playAudio(URL.createObjectURL(wavBlob));
+      } catch (err) {
+        alert("Failed to preview voice. Please check your API key.");
+      } finally {
+        btn.innerHTML = originalHtml;
+        btn.disabled = false;
+      }
+    };
 
     window.generateVoiceLine = async function() {
       const text = document.getElementById('tts-input').value.trim();
