@@ -28,7 +28,7 @@
 <body class="h-screen w-full flex overflow-hidden">
 
   <!-- Sidebar: Campaigns & NPCs -->
-  <aside class="w-64 bg-slate-900 border-r border-slate-800 flex flex-col h-full flex-shrink-0">
+  <aside class="w-72 bg-slate-900 border-r border-slate-800 flex flex-col h-full flex-shrink-0">
     <div class="p-4 border-b border-slate-800 flex items-center gap-3">
       <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-sky-400 to-indigo-600 flex items-center justify-center shadow-lg shadow-sky-500/20">
         <svg class="w-4 h-4 text-slate-950" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -72,7 +72,7 @@
     <div id="empty-state" class="flex-1 flex flex-col items-center justify-center p-8 text-center">
       <svg class="w-16 h-16 text-slate-700 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
       <h2 class="text-xl font-bold text-white mb-2">Campaign Soundboard Manager</h2>
-      <p class="text-slate-400 text-sm max-w-md">Create a campaign on the left, add NPC profiles, and generate custom neural voice lines to build your interactive soundboard.</p>
+      <p class="text-slate-400 text-sm max-w-md">Create folders on the left, add NPC profiles, and generate custom neural voice lines with unique races, accents, and styles.</p>
     </div>
 
     <!-- Active NPC Workspace -->
@@ -98,12 +98,14 @@
 
             <!-- Settings & Notes Area -->
             <div class="flex-1 space-y-4">
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                
+                <div class="lg:col-span-1">
                   <label class="block text-xs font-medium text-slate-400 uppercase mb-1">NPC Name</label>
                   <input type="text" id="npc-name-input" class="w-full rounded-xl bg-slate-900 border border-slate-700 p-2.5 text-sm text-slate-100 focus:outline-none focus:border-sky-400">
                 </div>
-                <div>
+
+                <div class="lg:col-span-2">
                   <label class="block text-xs font-medium text-slate-400 uppercase mb-1">Voice Model</label>
                   <div class="flex gap-2">
                     <select id="npc-voice-input" class="flex-1 rounded-xl bg-slate-900 border border-slate-700 p-2.5 text-sm text-slate-100 focus:outline-none focus:border-sky-400">
@@ -142,32 +144,49 @@
                         <option value="Sadaltager">Sadaltager — Knowledgeable</option>
                       </optgroup>
                     </select>
-                    <button onclick="previewVoice()" class="px-3 bg-slate-800 hover:bg-slate-700 text-sky-400 rounded-xl border border-slate-700 transition flex items-center justify-center" title="Preview Voice">
+                    <button onclick="previewVoice()" class="px-3 bg-slate-800 hover:bg-slate-700 text-sky-400 rounded-xl border border-slate-700 transition flex items-center justify-center" title="Preview Voice Settings">
                       <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
                     </button>
                   </div>
                 </div>
-                <div>
-                  <label class="block text-xs font-medium text-slate-400 uppercase mb-1">Default Delivery</label>
+
+                <div class="lg:col-span-1">
+                  <div class="flex gap-3 h-full items-end pb-1">
+                    <div class="flex-1">
+                      <div class="flex justify-between text-[10px] text-slate-400 mb-1"><span>PITCH</span><span id="npc-pitch-val">1.0</span></div>
+                      <input id="npc-pitch-input" type="range" min="0.5" max="1.5" step="0.1" value="1.0" class="w-full" oninput="document.getElementById('npc-pitch-val').innerText = parseFloat(this.value).toFixed(1)">
+                    </div>
+                    <div class="flex-1">
+                      <div class="flex justify-between text-[10px] text-slate-400 mb-1"><span>SPEED</span><span id="npc-rate-val">1.0</span></div>
+                      <input id="npc-rate-input" type="range" min="0.5" max="2.0" step="0.1" value="1.0" class="w-full" oninput="document.getElementById('npc-rate-val').innerText = parseFloat(this.value).toFixed(1)">
+                    </div>
+                  </div>
+                </div>
+
+                <div class="lg:col-span-2">
+                  <label class="block text-xs font-medium text-slate-400 uppercase mb-1">Race / Accent Overlay</label>
+                  <select id="npc-race-input" class="w-full rounded-xl bg-slate-900 border border-slate-700 p-2.5 text-sm text-slate-100 focus:outline-none focus:border-sky-400">
+                    <option value="human">Human (Standard Delivery)</option>
+                    <option value="elf">High Elf (Elegant, haughty, precise diction)</option>
+                    <option value="dwarf">Dwarf (Gruff, heavy Scottish accent)</option>
+                    <option value="orc">Orc (Guttural snarl, monstrous, aggressive)</option>
+                    <option value="goblin">Goblin (Raspy, manic, twitchy)</option>
+                    <option value="vampire">Vampire (Smooth, aristocratic, Transylvanian)</option>
+                  </select>
+                </div>
+
+                <div class="lg:col-span-2">
+                  <label class="block text-xs font-medium text-slate-400 uppercase mb-1">Default Style / Emotion</label>
                   <select id="npc-style-input" class="w-full rounded-xl bg-slate-900 border border-slate-700 p-2.5 text-sm text-slate-100 focus:outline-none focus:border-sky-400">
-                    <option value="neutral">Neutral / Professional</option>
-                    <option value="whisper">Spooky / Whisper</option>
-                    <option value="dramatic">Dramatic Narration</option>
-                    <option value="angry">Angry / Aggressive</option>
+                    <option value="neutral">Neutral / Conversational</option>
+                    <option value="whisper">Spooky / Whispered</option>
+                    <option value="dramatic">Dramatic / Cinematic</option>
+                    <option value="angry">Angry / Shouting</option>
                     <option value="cheerful">Cheerful / Happy</option>
                     <option value="bored">Tired / Bored</option>
                   </select>
                 </div>
-                <div class="flex gap-3">
-                  <div class="flex-1">
-                    <div class="flex justify-between text-[10px] text-slate-400 mb-1"><span>PITCH</span><span id="npc-pitch-val">1.0</span></div>
-                    <input id="npc-pitch-input" type="range" min="0.7" max="1.5" step="0.1" value="1.0" class="w-full" oninput="document.getElementById('npc-pitch-val').innerText = this.value">
-                  </div>
-                  <div class="flex-1">
-                    <div class="flex justify-between text-[10px] text-slate-400 mb-1"><span>SPEED</span><span id="npc-rate-val">1.0</span></div>
-                    <input id="npc-rate-input" type="range" min="0.5" max="2.0" step="0.1" value="1.0" class="w-full" oninput="document.getElementById('npc-rate-val').innerText = this.value">
-                  </div>
-                </div>
+
               </div>
               
               <!-- NPC Info Area -->
@@ -438,12 +457,13 @@
       document.getElementById('active-npc-breadcrumb').innerText = `${folderPath} / ${npc.name}`;
 
       document.getElementById('npc-name-input').value = npc.name;
-      document.getElementById('npc-voice-input').value = npc.voice;
-      document.getElementById('npc-style-input').value = npc.style;
-      document.getElementById('npc-pitch-input').value = npc.pitch;
-      document.getElementById('npc-pitch-val').innerText = npc.pitch;
-      document.getElementById('npc-rate-input').value = npc.rate;
-      document.getElementById('npc-rate-val').innerText = npc.rate;
+      document.getElementById('npc-voice-input').value = npc.voice || 'Kore';
+      document.getElementById('npc-style-input').value = npc.style || 'neutral';
+      document.getElementById('npc-race-input').value = npc.race || 'human';
+      document.getElementById('npc-pitch-input').value = npc.pitch || 1.0;
+      document.getElementById('npc-pitch-val').innerText = parseFloat(npc.pitch || 1.0).toFixed(1);
+      document.getElementById('npc-rate-input').value = npc.rate || 1.0;
+      document.getElementById('npc-rate-val').innerText = parseFloat(npc.rate || 1.0).toFixed(1);
 
       document.getElementById('npc-portrait-input').value = npc.portraitUrl || '';
       document.getElementById('npc-portrait-img').src = npc.portraitUrl || 'https://placehold.co/150x150/1e293b/38bdf8?text=?';
@@ -499,6 +519,7 @@
         name: document.getElementById('npc-name-input').value,
         voice: document.getElementById('npc-voice-input').value,
         style: document.getElementById('npc-style-input').value,
+        race: document.getElementById('npc-race-input').value,
         pitch: parseFloat(document.getElementById('npc-pitch-input').value),
         rate: parseFloat(document.getElementById('npc-rate-input').value),
         portraitUrl: document.getElementById('npc-portrait-input').value,
@@ -549,7 +570,7 @@
         const docRef = doc(db, 'artifacts', appId, 'users', userId, 'npcs', newId);
         await setDoc(docRef, { 
           id: newId, folderId: folderId, name: val, 
-          voice: 'Kore', style: 'neutral', pitch: 1.0, rate: 1.0, 
+          voice: 'Kore', style: 'neutral', race: 'human', pitch: 1.0, rate: 1.0, 
           portraitUrl: '', info: '',
           createdAt: Date.now() 
         });
@@ -629,7 +650,7 @@
       for (let i = 0; i < maxRetries; i++) {
         try {
           const response = await fetch(url, options);
-          if (response.status === 429) { // 429 is the "Too Many Requests" Rate Limit error
+          if (response.status === 429) { 
              console.warn(`Rate limited. Retrying in ${delay}ms...`);
              await new Promise(resolve => setTimeout(resolve, delay));
              delay *= 2; 
@@ -647,9 +668,29 @@
       throw new Error('Max retries reached');
     }
 
+    // Constructs the complex hidden prompt based on Race and Style
+    function buildDirectorPrompt(style, race, baseText) {
+      let raceDirective = "acting as a human";
+      if (race === 'elf') raceDirective = "acting as an elegant, haughty High Elf with precise diction";
+      if (race === 'dwarf') raceDirective = "acting as a gruff fantasy Dwarf with a heavy Scottish accent";
+      if (race === 'orc') raceDirective = "acting as a brutal fantasy Orc with a guttural, snarling, monstrous voice";
+      if (race === 'goblin') raceDirective = "acting as a manic, raspy, twitchy fantasy Goblin";
+      if (race === 'vampire') raceDirective = "acting as a smooth, aristocratic Vampire with a Transylvanian accent";
+
+      let promptPrefix = `Say clearly, ${raceDirective}: `;
+      if (style === 'cheerful') promptPrefix = `Say cheerfully and with high enthusiasm, ${raceDirective}: `;
+      else if (style === 'whisper') promptPrefix = `Say in a spooky, mysterious whisper, ${raceDirective}: `;
+      else if (style === 'dramatic') promptPrefix = `Say with dramatic cinematic narration style, ${raceDirective}: `;
+      else if (style === 'angry') promptPrefix = `Say in an angry, aggressive, shouting voice, ${raceDirective}: `;
+      else if (style === 'bored') promptPrefix = `Say in a tired, bored, monotonous voice, ${raceDirective}: `;
+
+      return promptPrefix + baseText;
+    }
+
     window.previewVoice = async function() {
       const voice = document.getElementById('npc-voice-input').value;
       const style = document.getElementById('npc-style-input').value;
+      const race = document.getElementById('npc-race-input').value;
       const pitch = parseFloat(document.getElementById('npc-pitch-input').value);
       const rate = parseFloat(document.getElementById('npc-rate-input').value);
 
@@ -664,13 +705,12 @@
       btn.innerHTML = `<svg class="w-4 h-4 animate-spin text-sky-400" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>`;
       btn.disabled = true;
 
-      let promptPrefix = "I am ready.";
-      if (style === 'cheerful') promptPrefix = "Hi there! I am ready.";
-      else if (style === 'whisper') promptPrefix = "I am here... ready.";
-      else if (style === 'dramatic') promptPrefix = "Behold. I am ready.";
-      else if (style === 'angry') promptPrefix = "I am ready! Let's go!";
-      else if (style === 'bored') promptPrefix = "Whatever... I am ready.";
+      // Small sample text based on style
+      let sampleText = "I am ready.";
+      if (style === 'cheerful') sampleText = "Hi there! I am ready.";
+      if (style === 'angry') sampleText = "I am ready! Let's go!";
 
+      const fullPrompt = buildDirectorPrompt(style, race, sampleText);
       const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${activeKey}`;
       
       try {
@@ -678,7 +718,7 @@
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            contents: [{ parts: [{ text: promptPrefix }] }],
+            contents: [{ parts: [{ text: fullPrompt }] }],
             generationConfig: {
               responseModalities: ["AUDIO"],
               speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } }
@@ -723,14 +763,7 @@
       btn.innerHTML = `<span class="animate-pulse">Generating...</span>`;
       btn.disabled = true;
 
-      let promptPrefix = "Say clearly: ";
-      if (npc.style === 'cheerful') promptPrefix = "Say cheerfully and with high enthusiasm: ";
-      else if (npc.style === 'whisper') promptPrefix = "Say in a spooky, mysterious whisper: ";
-      else if (npc.style === 'dramatic') promptPrefix = "Say with dramatic cinematic narration style: ";
-      else if (npc.style === 'angry') promptPrefix = "Say in an angry, aggressive, shouting voice: ";
-      else if (npc.style === 'bored') promptPrefix = "Say in a tired, bored, monotonous voice: ";
-
-      const fullPrompt = promptPrefix + text;
+      const fullPrompt = buildDirectorPrompt(npc.style, npc.race, text);
       const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${activeKey}`;
       
       try {
@@ -752,7 +785,7 @@
 
         const effectiveSampleRate = Math.round(24000 * (1 / npc.rate) * npc.pitch); 
 
-        // Save to Firebase instead of local array
+        // Save to Firebase
         const newId = generateId();
         const docRef = doc(db, 'artifacts', appId, 'users', userId, 'lines', newId);
         await setDoc(docRef, {
