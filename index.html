@@ -84,79 +84,96 @@
           <div class="flex justify-between items-center mb-4">
             <h2 class="text-lg font-bold text-white flex items-center gap-2">
               <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-              NPC Voice Profile
+              NPC Profile & Settings
             </h2>
             <button onclick="saveNpcSettings()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-sky-400 text-xs font-bold rounded-lg transition">Save Profile Changes</button>
           </div>
           
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div>
-              <label class="block text-xs font-medium text-slate-400 uppercase mb-1">NPC Name</label>
-              <input type="text" id="npc-name-input" class="w-full rounded-xl bg-slate-900 border border-slate-700 p-2.5 text-sm text-slate-100 focus:outline-none focus:border-sky-400">
+          <div class="flex flex-col md:flex-row gap-5">
+            <!-- Portrait Area -->
+            <div class="flex flex-col items-center gap-2 w-full md:w-32 flex-shrink-0">
+              <img id="npc-portrait-img" src="https://placehold.co/150x150/1e293b/38bdf8?text=?" class="w-32 h-32 rounded-2xl object-cover border border-slate-700 bg-slate-800 shadow-inner" alt="NPC Portrait" onerror="this.src='https://placehold.co/150x150/1e293b/38bdf8?text=?'">
+              <input type="text" id="npc-portrait-input" placeholder="Image URL (Catbox, etc.)" class="w-full text-[10px] rounded-lg bg-slate-900 border border-slate-700 p-1.5 text-slate-300 focus:outline-none focus:border-sky-400" oninput="document.getElementById('npc-portrait-img').src = this.value || 'https://placehold.co/150x150/1e293b/38bdf8?text=?'">
             </div>
-            <div>
-              <label class="block text-xs font-medium text-slate-400 uppercase mb-1">Voice Model</label>
-              <div class="flex gap-2">
-                <select id="npc-voice-input" class="flex-1 rounded-xl bg-slate-900 border border-slate-700 p-2.5 text-sm text-slate-100 focus:outline-none focus:border-sky-400">
-                  <optgroup label="Female Voices">
-                    <option value="Zephyr">Zephyr — Bright</option>
-                    <option value="Kore">Kore — Firm</option>
-                    <option value="Leda">Leda — Youthful</option>
-                    <option value="Aoede">Aoede — Breezy</option>
-                    <option value="Callirrhoe">Callirrhoe — Easy-going</option>
-                    <option value="Autonoe">Autonoe — Bright</option>
-                    <option value="Despina">Despina — Smooth</option>
-                    <option value="Erinome">Erinome — Clear</option>
-                    <option value="Laomedeia">Laomedeia — Upbeat</option>
-                    <option value="Achernar">Achernar — Soft</option>
-                    <option value="Gacrux">Gacrux — Mature</option>
-                    <option value="Vindemiatrix">Vindemiatrix — Gentle</option>
-                    <option value="Sulafat">Sulafat — Warm</option>
-                  </optgroup>
-                  <optgroup label="Male Voices">
-                    <option value="Puck">Puck — Upbeat</option>
-                    <option value="Charon">Charon — Informative</option>
-                    <option value="Fenrir">Fenrir — Excitable</option>
-                    <option value="Orus">Orus — Firm</option>
-                    <option value="Enceladus">Enceladus — Breathy</option>
-                    <option value="Iapetus">Iapetus — Clear</option>
-                    <option value="Umbriel">Umbriel — Easy-going</option>
-                    <option value="Algieba">Algieba — Smooth</option>
-                    <option value="Algenib">Algenib — Gravelly</option>
-                    <option value="Rasalgethi">Rasalgethi — Informative</option>
-                    <option value="Alnilam">Alnilam — Firm</option>
-                    <option value="Schedar">Schedar — Even</option>
-                    <option value="Pulcherrima">Pulcherrima — Forward</option>
-                    <option value="Achird">Achird — Friendly</option>
-                    <option value="Zubenelgenubi">Zubenelgenubi — Casual</option>
-                    <option value="Sadachbia">Sadachbia — Lively</option>
-                    <option value="Sadaltager">Sadaltager — Knowledgeable</option>
-                  </optgroup>
-                </select>
-                <button onclick="previewVoice()" class="px-3 bg-slate-800 hover:bg-slate-700 text-sky-400 rounded-xl border border-slate-700 transition flex items-center justify-center" title="Preview Voice">
-                  <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
-                </button>
+
+            <!-- Settings & Notes Area -->
+            <div class="flex-1 space-y-4">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-xs font-medium text-slate-400 uppercase mb-1">NPC Name</label>
+                  <input type="text" id="npc-name-input" class="w-full rounded-xl bg-slate-900 border border-slate-700 p-2.5 text-sm text-slate-100 focus:outline-none focus:border-sky-400">
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-slate-400 uppercase mb-1">Voice Model</label>
+                  <div class="flex gap-2">
+                    <select id="npc-voice-input" class="flex-1 rounded-xl bg-slate-900 border border-slate-700 p-2.5 text-sm text-slate-100 focus:outline-none focus:border-sky-400">
+                      <optgroup label="Female Voices">
+                        <option value="Zephyr">Zephyr — Bright</option>
+                        <option value="Kore">Kore — Firm</option>
+                        <option value="Leda">Leda — Youthful</option>
+                        <option value="Aoede">Aoede — Breezy</option>
+                        <option value="Callirrhoe">Callirrhoe — Easy-going</option>
+                        <option value="Autonoe">Autonoe — Bright</option>
+                        <option value="Despina">Despina — Smooth</option>
+                        <option value="Erinome">Erinome — Clear</option>
+                        <option value="Laomedeia">Laomedeia — Upbeat</option>
+                        <option value="Achernar">Achernar — Soft</option>
+                        <option value="Gacrux">Gacrux — Mature</option>
+                        <option value="Vindemiatrix">Vindemiatrix — Gentle</option>
+                        <option value="Sulafat">Sulafat — Warm</option>
+                      </optgroup>
+                      <optgroup label="Male Voices">
+                        <option value="Puck">Puck — Upbeat</option>
+                        <option value="Charon">Charon — Informative</option>
+                        <option value="Fenrir">Fenrir — Excitable</option>
+                        <option value="Orus">Orus — Firm</option>
+                        <option value="Enceladus">Enceladus — Breathy</option>
+                        <option value="Iapetus">Iapetus — Clear</option>
+                        <option value="Umbriel">Umbriel — Easy-going</option>
+                        <option value="Algieba">Algieba — Smooth</option>
+                        <option value="Algenib">Algenib — Gravelly</option>
+                        <option value="Rasalgethi">Rasalgethi — Informative</option>
+                        <option value="Alnilam">Alnilam — Firm</option>
+                        <option value="Schedar">Schedar — Even</option>
+                        <option value="Pulcherrima">Pulcherrima — Forward</option>
+                        <option value="Achird">Achird — Friendly</option>
+                        <option value="Zubenelgenubi">Zubenelgenubi — Casual</option>
+                        <option value="Sadachbia">Sadachbia — Lively</option>
+                        <option value="Sadaltager">Sadaltager — Knowledgeable</option>
+                      </optgroup>
+                    </select>
+                    <button onclick="previewVoice()" class="px-3 bg-slate-800 hover:bg-slate-700 text-sky-400 rounded-xl border border-slate-700 transition flex items-center justify-center" title="Preview Voice">
+                      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-xs font-medium text-slate-400 uppercase mb-1">Default Delivery</label>
+                  <select id="npc-style-input" class="w-full rounded-xl bg-slate-900 border border-slate-700 p-2.5 text-sm text-slate-100 focus:outline-none focus:border-sky-400">
+                    <option value="neutral">Neutral / Professional</option>
+                    <option value="whisper">Spooky / Whisper</option>
+                    <option value="dramatic">Dramatic Narration</option>
+                    <option value="angry">Angry / Aggressive</option>
+                    <option value="cheerful">Cheerful / Happy</option>
+                    <option value="bored">Tired / Bored</option>
+                  </select>
+                </div>
+                <div class="flex gap-3">
+                  <div class="flex-1">
+                    <div class="flex justify-between text-[10px] text-slate-400 mb-1"><span>PITCH</span><span id="npc-pitch-val">1.0</span></div>
+                    <input id="npc-pitch-input" type="range" min="0.7" max="1.5" step="0.1" value="1.0" class="w-full" oninput="document.getElementById('npc-pitch-val').innerText = this.value">
+                  </div>
+                  <div class="flex-1">
+                    <div class="flex justify-between text-[10px] text-slate-400 mb-1"><span>SPEED</span><span id="npc-rate-val">1.0</span></div>
+                    <input id="npc-rate-input" type="range" min="0.5" max="2.0" step="0.1" value="1.0" class="w-full" oninput="document.getElementById('npc-rate-val').innerText = this.value">
+                  </div>
+                </div>
               </div>
-            </div>
-            <div>
-              <label class="block text-xs font-medium text-slate-400 uppercase mb-1">Default Delivery</label>
-              <select id="npc-style-input" class="w-full rounded-xl bg-slate-900 border border-slate-700 p-2.5 text-sm text-slate-100 focus:outline-none focus:border-sky-400">
-                <option value="neutral">Neutral / Professional</option>
-                <option value="whisper">Spooky / Whisper</option>
-                <option value="dramatic">Dramatic Narration</option>
-                <option value="angry">Angry / Aggressive</option>
-                <option value="cheerful">Cheerful / Happy</option>
-                <option value="bored">Tired / Bored</option>
-              </select>
-            </div>
-            <div class="flex gap-3">
-              <div class="flex-1">
-                <div class="flex justify-between text-[10px] text-slate-400 mb-1"><span>PITCH</span><span id="npc-pitch-val">1.0</span></div>
-                <input id="npc-pitch-input" type="range" min="0.7" max="1.5" step="0.1" value="1.0" class="w-full" oninput="document.getElementById('npc-pitch-val').innerText = this.value">
-              </div>
-              <div class="flex-1">
-                <div class="flex justify-between text-[10px] text-slate-400 mb-1"><span>SPEED</span><span id="npc-rate-val">1.0</span></div>
-                <input id="npc-rate-input" type="range" min="0.5" max="2.0" step="0.1" value="1.0" class="w-full" oninput="document.getElementById('npc-rate-val').innerText = this.value">
+              
+              <!-- NPC Info Area -->
+              <div>
+                <label class="block text-xs font-medium text-slate-400 uppercase mb-1">Character Information & Notes</label>
+                <textarea id="npc-info-input" rows="2" class="w-full rounded-xl bg-slate-900 border border-slate-700 p-2.5 text-sm text-slate-100 focus:outline-none focus:border-sky-400 resize-y" placeholder="Background, appearance, personality quirks..."></textarea>
               </div>
             </div>
           </div>
@@ -428,6 +445,10 @@
       document.getElementById('npc-rate-input').value = npc.rate;
       document.getElementById('npc-rate-val').innerText = npc.rate;
 
+      document.getElementById('npc-portrait-input').value = npc.portraitUrl || '';
+      document.getElementById('npc-portrait-img').src = npc.portraitUrl || 'https://placehold.co/150x150/1e293b/38bdf8?text=?';
+      document.getElementById('npc-info-input').value = npc.info || '';
+
       renderSoundboard();
     }
 
@@ -480,6 +501,8 @@
         style: document.getElementById('npc-style-input').value,
         pitch: parseFloat(document.getElementById('npc-pitch-input').value),
         rate: parseFloat(document.getElementById('npc-rate-input').value),
+        portraitUrl: document.getElementById('npc-portrait-input').value,
+        info: document.getElementById('npc-info-input').value,
         createdAt: existingNpc.createdAt 
       }, { merge: true });
     };
@@ -526,7 +549,9 @@
         const docRef = doc(db, 'artifacts', appId, 'users', userId, 'npcs', newId);
         await setDoc(docRef, { 
           id: newId, folderId: folderId, name: val, 
-          voice: 'Kore', style: 'neutral', pitch: 1.0, rate: 1.0, createdAt: Date.now() 
+          voice: 'Kore', style: 'neutral', pitch: 1.0, rate: 1.0, 
+          portraitUrl: '', info: '',
+          createdAt: Date.now() 
         });
         appState.expandedFolders[folderId] = true;
         window.selectNpc(newId);
