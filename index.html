@@ -165,7 +165,7 @@
 
                 <div class="lg:col-span-2">
                   <label class="block text-xs font-medium text-slate-400 uppercase mb-1">Race / Accent Overlay</label>
-                  <select id="npc-race-input" class="w-full rounded-xl bg-slate-900 border border-slate-700 p-2.5 text-sm text-slate-100 focus:outline-none focus:border-sky-400">
+                  <select id="npc-race-input" onchange="updatePromptPreview()" class="w-full rounded-xl bg-slate-900 border border-slate-700 p-2.5 text-sm text-slate-100 focus:outline-none focus:border-sky-400">
                     <optgroup label="Core Races (5.5e)">
                       <option value="human">Human (Standard Delivery)</option>
                       <option value="elf">Elf (Elegant, precise diction)</option>
@@ -198,7 +198,7 @@
 
                 <div class="lg:col-span-2">
                   <label class="block text-xs font-medium text-slate-400 uppercase mb-1">Default Style / Emotion</label>
-                  <select id="npc-style-input" class="w-full rounded-xl bg-slate-900 border border-slate-700 p-2.5 text-sm text-slate-100 focus:outline-none focus:border-sky-400">
+                  <select id="npc-style-input" onchange="updatePromptPreview()" class="w-full rounded-xl bg-slate-900 border border-slate-700 p-2.5 text-sm text-slate-100 focus:outline-none focus:border-sky-400">
                     <option value="neutral">Neutral / Conversational</option>
                     <option value="whisper">Spooky / Whispered</option>
                     <option value="dramatic">Dramatic / Cinematic</option>
@@ -223,11 +223,16 @@
         <div class="synth-panel rounded-2xl p-5 border border-sky-900/50 bg-sky-900/10">
           <label class="block text-xs font-bold text-sky-400 uppercase mb-2">Generate New Voice Line</label>
           <div class="flex flex-col sm:flex-row gap-3">
-            <textarea id="tts-input" rows="2" class="flex-1 rounded-xl bg-slate-900/90 border border-slate-700/80 p-3 text-sm text-slate-100 focus:outline-none focus:border-sky-400 resize-none" placeholder="Type dialogue here..."></textarea>
+            <textarea id="tts-input" rows="2" class="flex-1 rounded-xl bg-slate-900/90 border border-slate-700/80 p-3 text-sm text-slate-100 focus:outline-none focus:border-sky-400 resize-none" placeholder="Type dialogue here..." oninput="updatePromptPreview()"></textarea>
             <button id="generate-btn" onclick="generateVoiceLine()" class="sm:w-32 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold py-3 px-4 rounded-xl transition text-sm flex flex-col items-center justify-center gap-1 shadow-lg shadow-sky-500/20">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
               <span>Generate</span>
             </button>
+          </div>
+          <!-- Live Prompt Preview -->
+          <div class="mt-3 p-3 bg-slate-950/50 rounded-lg border border-slate-800">
+            <div class="text-[10px] text-slate-500 font-mono uppercase mb-1">Final API Prompt Preview</div>
+            <div id="prompt-preview-text" class="text-xs text-slate-500 italic font-serif">Type dialogue above to see the director's prompt...</div>
           </div>
         </div>
 
@@ -490,6 +495,9 @@
       document.getElementById('npc-portrait-img').src = npc.portraitUrl || 'https://placehold.co/150x150/1e293b/38bdf8?text=?';
       document.getElementById('npc-info-input').value = npc.info || '';
 
+      document.getElementById('tts-input').value = '';
+      updatePromptPreview();
+
       renderSoundboard();
     }
 
@@ -741,6 +749,25 @@
 
       return promptPrefix + baseText;
     }
+
+    window.updatePromptPreview = function() {
+      const text = document.getElementById('tts-input').value.trim();
+      const style = document.getElementById('npc-style-input').value;
+      const race = document.getElementById('npc-race-input').value;
+      const previewEl = document.getElementById('prompt-preview-text');
+      
+      if (!text) {
+        previewEl.innerText = "Type dialogue above to see the director's prompt...";
+        previewEl.classList.add('text-slate-500');
+        previewEl.classList.remove('text-sky-300');
+        return;
+      }
+      
+      const fullPrompt = buildDirectorPrompt(style, race, text);
+      previewEl.innerText = `"${fullPrompt}"`;
+      previewEl.classList.remove('text-slate-500');
+      previewEl.classList.add('text-sky-300');
+    };
 
     window.previewVoice = async function() {
       const voice = document.getElementById('npc-voice-input').value;
