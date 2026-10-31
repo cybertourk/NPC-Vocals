@@ -647,14 +647,16 @@
     // Helper for Exponential Backoff on API rate limits
     async function fetchWithRetry(url, options, maxRetries = 4) {
       let delay = 1000;
-      let lastResponse = null;
       
       for (let i = 0; i < maxRetries; i++) {
         try {
           const response = await fetch(url, options);
-          lastResponse = response;
           
           if (response.status === 429) { 
+             if (i === maxRetries - 1) {
+                 const errorData = await response.json().catch(() => ({}));
+                 throw new Error(errorData.error?.message || "Rate limit exceeded (You have likely hit your 1,500 daily request quota limit).");
+             }
              console.warn(`Rate limited. Retrying in ${delay}ms...`);
              await new Promise(resolve => setTimeout(resolve, delay));
              delay *= 2; 
@@ -669,11 +671,6 @@
           return response;
         } catch (err) {
           if (i === maxRetries - 1) {
-             // If we failed all retries and it was a 429, extract the real Google error
-             if (lastResponse && lastResponse.status === 429) {
-                 const errorData = await lastResponse.json().catch(() => ({}));
-                 throw new Error(errorData.error?.message || "Rate limit exceeded (You may have hit your 1,500 daily request limit).");
-             }
              throw err;
           }
           console.warn(`Fetch error. Retrying in ${delay}ms...`, err);
