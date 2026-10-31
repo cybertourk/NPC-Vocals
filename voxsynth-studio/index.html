@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VoxSynth Studio - Gemini Neural TTS Engine</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      background-color: #090d16;
+      color: #f8fafc;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .synth-panel {
+      background: linear-gradient(145deg, #131c2e, #0d1322);
+      border: 1px solid #1e293b;
+      box-shadow: 0 12px 30px -8px rgba(0, 0, 0, 0.6);
+    }
+    input[type="range"] {
+      accent-color: #38bdf8;
+      cursor: pointer;
+    }
+    .key-btn {
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+    .key-btn:active, .key-btn.active {
+      background-color: #38bdf8 !important;
+      color: #090d16 !important;
+      border-color: #7dd3fc !important;
+      transform: translateY(2px);
+      box-shadow: 0 0 15px rgba(56, 189, 248, 0.5);
+    }
+  </style>
+</head>
+<body class="min-h-screen p-3 sm:p-6 md:p-8 flex flex-col items-center">
+
+  <div class="max-w-5xl w-full space-y-5">
+    
+    <!-- Studio Header -->
+    <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-800 pb-4 gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-400 to-indigo-600 flex items-center justify-center shadow-lg shadow-sky-500/20">
+          <svg class="w-6 h-6 text-slate-950" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path>
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight bg-gradient-to-r from-sky-400 via-cyan-300 to-indigo-400 bg-clip-text text-transparent">
+            VOXSYNTH STUDIO
+          </h1>
+          <p class="text-slate-400 text-xs sm:text-sm">Gemini Neural Studio TTS & Advanced Voice Modulator</p>
+        </div>
+      </div>
+      <div class="flex items-center space-x-3 self-end sm:self-auto">
+        <button id="api-key-btn" class="px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-sky-400 border border-slate-700 transition flex items-center gap-1.5" title="Configure Gemini API Key for external hosting">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
+          </svg>
+          <span id="api-key-status">API Key</span>
+        </button>
+        <span id="status-badge" class="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-slate-800/90 text-slate-300 border border-slate-700 flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+          <span>Neural Engine Ready</span>
+        </span>
+      </div>
+    </header>
+
+    <!-- API Key Modal (For GitHub Pages / External Hosting) -->
+    <div id="api-modal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+      <div class="synth-panel rounded-2xl max-w-md w-full p-6 space-y-4 border border-slate-700">
+        <div class="flex justify-between items-center">
+          <h3 class="text-lg font-bold text-white flex items-center gap-2">
+            <svg class="w-5 h-5 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
+            </svg>
+            Gemini API Key Setup
+          </h3>
+          <button id="close-modal-btn" class="text-slate-400 hover:text-white text-sm">✕</button>
+        </div>
+        <p class="text-xs text-slate-300 leading-relaxed">
+          When hosting on <strong>GitHub Pages</strong>, enter your free Google AI Studio API Key below. It is saved privately in your browser's <code class="text-sky-400">localStorage</code> and never shared in public code.
+        </p>
+        <div>
+          <label for="user-api-key" class="block text-xs font-medium text-slate-400 uppercase mb-1">Your Gemini API Key</label>
+          <input id="user-api-key" type="password" placeholder="AIzaSy..." 
+            class="w-full rounded-xl bg-slate-900 border border-slate-700 p-2.5 text-sm text-slate-100 font-mono focus:outline-none focus:border-sky-400">
+        </div>
+        <div class="flex justify-between items-center pt-2 gap-2">
+          <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" class="text-xs text-sky-400 hover:underline">
+            Get a free key at Google AI Studio →
+          </a>
+          <div class="flex gap-2">
+            <button id="clear-key-btn" class="px-3 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300">
+              Clear
+            </button>
+            <button id="save-key-btn" class="px-4 py-2 rounded-xl text-xs font-bold bg-sky-400 hover:bg-sky-300 text-slate-950">
+              Save Key
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Real-Time Oscilloscope & Word Stream Readout -->
+    <div class="synth-panel rounded-2xl p-4 relative overflow-hidden">
+      <div class="flex flex-wrap justify-between items-center mb-2 gap-2">
+        <span class="text-xs font-mono uppercase tracking-wider text-sky-400 flex items-center gap-1.5">
+          <span class="inline-block w-2 h-2 rounded-full bg-sky-400 animate-ping"></span>
+          Real-Time Neural Audio Waveform Scope
+        </span>
+        <div class="flex items-center gap-2">
+          <span id="voice-readout" class="text-xs font-mono text-indigo-300 bg-indigo-950/80 px-2.5 py-0.5 rounded border border-indigo-700/50">
+            Voice: Kore (Firm)
+          </span>
+          <span id="freq-readout" class="text-xs font-mono text-slate-400 bg-slate-900/80 px-2.5 py-0.5 rounded border border-slate-800">
+            Idle • 24kHz
+          </span>
+        </div>
+      </div>
+      <div class="w-full h-32 sm:h-36 bg-slate-950 rounded-xl border border-slate-800/80 overflow-hidden relative">
+        <canvas id="visualizer" class="w-full h-full block"></canvas>
+      </div>
+    </div>
+
+    <!-- Main Studio Controls Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+      
+      <!-- Left/Center Column: Script & Gemini TTS (7 cols) -->
+      <div class="lg:col-span-7 synth-panel rounded-2xl p-5 sm:p-6 space-y-4 flex flex-col justify-between">
+        <div class="space-y-4">
+          <div class="flex justify-between items-center flex-wrap gap-2">
+            <h2 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+              <svg class="w-5 h-5 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
+              </svg>
+              Neural Script & Voice Generator
+            </h2>
+            <button id="sample-text-btn" class="text-xs font-medium text-sky-400 hover:text-sky-300 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 px-2.5 py-1 rounded-lg transition">
+              Cycle Sample Scripts
+            </button>
+          </div>
+
+          <!-- Text Input Box -->
+          <div>
+            <label for="tts-input" class="block text-xs font-medium text-slate-400 uppercase mb-1.5">Text to Synthesize</label>
+            <textarea id="tts-input" rows="2" 
+              class="w-full rounded-xl bg-slate-900/90 border border-slate-700/80 p-3 text-sm sm:text-base text-slate-100 placeholder-slate-500 focus:outline-none focus:border-sky-400 transition resize-none"
+              placeholder="Type anything here for Gemini to speak...">Hello human, welcome to VoxSynth Studio powered by advanced Gemini neural text to speech.</textarea>
+          </div>
+
+          <!-- Live Word Tracking Box -->
+          <div class="bg-slate-950/80 border border-slate-800/90 rounded-xl p-3 space-y-1.5">
+            <div class="flex justify-between items-center text-[11px] font-mono text-slate-400 uppercase">
+              <span>Active Word Stream & Timing</span>
+              <span id="word-step-indicator" class="text-sky-400">Ready</span>
+            </div>
+            <div id="live-caption" class="text-xs sm:text-sm text-slate-300 font-mono leading-relaxed min-h-[2rem] flex flex-wrap items-center gap-1.5">
+              <!-- Populated dynamically -->
+            </div>
+          </div>
+
+          <!-- Expanded Voice Options Grid -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            <div>
+              <label for="voice-select" class="block text-xs font-medium text-slate-400 uppercase mb-1">Gemini Studio Voice Model</label>
+              <select id="voice-select" class="w-full rounded-xl bg-slate-900 border border-sky-500/50 p-2.5 text-xs sm:text-sm text-slate-100 focus:outline-none focus:border-sky-400">
+                <option value="Kore">Kore — Firm, Authoritative & Clear</option>
+                <option value="Zephyr">Zephyr — Bright, Clear & Articulate</option>
+                <option value="Puck">Puck — Upbeat, Energetic & Youthful</option>
+                <option value="Charon">Charon — Informative, Deep & Steady</option>
+                <option value="Fenrir">Fenrir — Excitable, Dynamic & Bold</option>
+                <option value="Aoede">Aoede — Breezy, Melodic & Warm</option>
+                <option value="Leda">Leda — Youthful & Crisp</option>
+                <option value="Orus">Orus — Deep, Firm & Resonant</option>
+                <option value="Callirrhoe">Callirrhoe — Easy-going & Natural</option>
+                <option value="Autonoe">Autonoe — Bright & Friendly</option>
+                <option value="Enceladus">Enceladus — Breathy & Ambient</option>
+                <option value="Iapetus">Iapetus — Crystal Clear & Direct</option>
+                <option value="Umbriel">Umbriel — Casual & Relaxed</option>
+                <option value="Algieba">Algieba — Smooth & Professional</option>
+                <option value="Despina">Despina — Soft & Smooth</option>
+                <option value="Erinome">Erinome — Crisp & Articulate</option>
+                <option value="Algenib">Algenib — Gravelly & Distinctive</option>
+                <option value="Rasalgethi">Rasalgethi — Informative & Balanced</option>
+                <option value="Laomedeia">Laomedeia — Upbeat & Cheerful</option>
+                <option value="Achernar">Achernar — Soft & Gentle</option>
+                <option value="Alnilam">Alnilam — Firm & Authoritative</option>
+                <option value="Schedar">Schedar — Even & Measured</option>
+                <option value="Gacrux">Gacrux — Mature & Grounded</option>
+                <option value="Pulcherrima">Pulcherrima — Forward & Distinct</option>
+                <option value="Achird">Achird — Friendly & Approachable</option>
+                <option value="Zubenelgenubi">Zubenelgenubi — Casual & Warm</option>
+                <option value="Vindemiatrix">Vindemiatrix — Gentle & Soothing</option>
+                <option value="Sadachbia">Sadachbia — Lively & Dynamic</option>
+                <option value="Sadaltager">Sadaltager — Knowledgeable & Expert</option>
+                <option value="Sulafat">Sulafat — Warm & Rich</option>
+              </select>
+            </div>
+            <div>
+              <label for="style-select" class="block text-xs font-medium text-slate-400 uppercase mb-1">Delivery Persona / Emotion</label>
+              <select id="style-select" class="w-full rounded-xl bg-slate-900 border border-slate-700 p-2.5 text-xs sm:text-sm text-slate-100 focus:outline-none focus:border-sky-400">
+                <option value="neutral">Natural Studio (Professional)</option>
+                <option value="cheerful">Cheerful & Enthusiastic</option>
+                <option value="whisper">Spooky / Mystery Whisper</option>
+                <option value="dramatic">Dramatic & Cinematic Narration</option>
+                <option value="bored">Tired & Bored Monotone</option>
+                <option value="robot">Robotic Android Announcement</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Parameter Sliders -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
+            <div class="bg-slate-900/70 p-3 rounded-xl border border-slate-800">
+              <div class="flex justify-between text-xs mb-1.5">
+                <span class="text-slate-400 font-medium">PLAYBACK SPEED</span>
+                <span id="rate-val" class="font-mono text-sky-400 font-bold">1.0x</span>
+              </div>
+              <input id="rate-slider" type="range" min="0.5" max="2.0" step="0.1" value="1.0" class="w-full">
+            </div>
+
+            <div class="bg-slate-900/70 p-3 rounded-xl border border-slate-800">
+              <div class="flex justify-between text-xs mb-1.5">
+                <span class="text-slate-400 font-medium">PITCH SHIFT (VIRTUAL)</span>
+                <span id="pitch-val" class="font-mono text-sky-400 font-bold">1.0x</span>
+              </div>
+              <input id="pitch-slider" type="range" min="0.7" max="1.5" step="0.1" value="1.0" class="w-full">
+            </div>
+          </div>
+        </div>
+
+        <!-- Transport Action Bar -->
+        <div class="flex flex-wrap gap-2.5 pt-4 border-t border-slate-800/80">
+          <button id="speak-btn" class="flex-1 min-w-[150px] bg-gradient-to-r from-sky-400 to-cyan-400 hover:from-sky-300 hover:to-cyan-300 text-slate-950 font-bold py-3 px-4 rounded-xl shadow-lg shadow-sky-500/20 transition flex items-center justify-center gap-2 text-sm">
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path>
+            </svg>
+            Synthesize Neural Speech
+          </button>
+          <button id="stop-btn" class="bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 font-semibold py-3 px-4 rounded-xl text-sm transition">
+            Stop Audio
+          </button>
+        </div>
+      </div>
+
+      <!-- Right Column: Quick Phrases & Voice Showcase (5 cols) -->
+      <div class="lg:col-span-5 synth-panel rounded-2xl p-5 sm:p-6 flex flex-col justify-between space-y-5">
+        <div class="space-y-4">
+          <div class="flex justify-between items-start gap-2">
+            <div>
+              <h2 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path>
+                </svg>
+                Voice Model Showcase
+              </h2>
+              <p class="text-xs text-slate-400 mt-0.5">
+                Quick-test different neural voices with studio presets.
+              </p>
+            </div>
+          </div>
+
+          <!-- Quick Voice Test Buttons -->
+          <div>
+            <label class="block text-xs font-medium text-slate-400 uppercase mb-2">Featured Studio Voices</label>
+            <div class="grid grid-cols-2 gap-2" id="quick-voices">
+              <button data-voice="Kore" class="quick-voice-btn p-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-left transition flex flex-col">
+                <span class="text-xs font-bold text-sky-400">Kore</span>
+                <span class="text-[10px] text-slate-400">Firm & Authoritative</span>
+              </button>
+              <button data-voice="Zephyr" class="quick-voice-btn p-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-left transition flex flex-col">
+                <span class="text-xs font-bold text-sky-400">Zephyr</span>
+                <span class="text-[10px] text-slate-400">Bright & Clear</span>
+              </button>
+              <button data-voice="Puck" class="quick-voice-btn p-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-left transition flex flex-col">
+                <span class="text-xs font-bold text-indigo-400">Puck</span>
+                <span class="text-[10px] text-slate-400">Upbeat & Energetic</span>
+              </button>
+              <button data-voice="Charon" class="quick-voice-btn p-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-left transition flex flex-col">
+                <span class="text-xs font-bold text-indigo-400">Charon</span>
+                <span class="text-[10px] text-slate-400">Deep & Informative</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Preset Sentences -->
+          <div>
+            <label class="block text-xs font-medium text-slate-400 uppercase mb-2">Test Sentences</label>
+            <div class="space-y-2">
+              <button data-text="Synthetic voices and neural speech synthesis are changing how we interact with technology." class="preset-phrase w-full p-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-800 text-xs text-left text-slate-300 transition">
+                "Synthetic voices and neural speech synthesis..."
+              </button>
+              <button data-text="Around the world, digital audio generators create crystal clear human speech." class="preset-phrase w-full p-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-800 text-xs text-left text-slate-300 transition">
+                "Around the world, digital audio generators..."
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Audio Info Footer -->
+        <div class="pt-3 border-t border-slate-800/80 text-[11px] text-slate-400 flex justify-between items-center">
+          <span>Format: 24kHz PCM Audio</span>
+          <span class="text-sky-400">Gemini 2.5 Flash TTS</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    let audioCtx = null;
+    let analyser = null;
+    let currentAudioSource = null;
+    let isSpeaking = false;
+    let scheduledTimeouts = [];
+
+    const ttsInput = document.getElementById('tts-input');
+    const voiceSelect = document.getElementById('voice-select');
+    const styleSelect = document.getElementById('style-select');
+    const rateSlider = document.getElementById('rate-slider');
+    const pitchSlider = document.getElementById('pitch-slider');
+
+    const rateVal = document.getElementById('rate-val');
+    const pitchVal = document.getElementById('pitch-val');
+    const statusBadge = document.getElementById('status-badge');
+    const liveCaption = document.getElementById('live-caption');
+    const freqReadout = document.getElementById('freq-readout');
+    const voiceReadout = document.getElementById('voice-readout');
+    const wordStepIndicator = document.getElementById('word-step-indicator');
+
+    const speakBtn = document.getElementById('speak-btn');
+    const stopBtn = document.getElementById('stop-btn');
+    const sampleTextBtn = document.getElementById('sample-text-btn');
+    const canvas = document.getElementById('visualizer');
+    const ctx = canvas.getContext('2d');
+
+    // API Key Modal Elements for GitHub Hosting
+    const apiKeyBtn = document.getElementById('api-key-btn');
+    const apiKeyStatus = document.getElementById('api-key-status');
+    const apiModal = document.getElementById('api-modal');
+    const closeModalBtn = document.getElementById('close-modal-btn');
+    const userApiKeyInput = document.getElementById('user-api-key');
+    const saveKeyBtn = document.getElementById('save-key-btn');
+    const clearKeyBtn = document.getElementById('clear-key-btn');
+
+    const defaultApiKey = ""; // Injected automatically in Canvas Preview
+
+    function getActiveApiKey() {
+      const saved = localStorage.getItem('voxsynth_gemini_api_key');
+      return (saved && saved.trim() !== '') ? saved.trim() : defaultApiKey;
+    }
+
+    function updateApiKeyBadge() {
+      const saved = localStorage.getItem('voxsynth_gemini_api_key');
+      if (saved && saved.trim() !== '') {
+        apiKeyStatus.textContent = 'Key Saved';
+        apiKeyBtn.classList.replace('text-sky-400', 'text-emerald-400');
+      } else {
+        apiKeyStatus.textContent = 'API Key';
+        apiKeyBtn.classList.replace('text-emerald-400', 'text-sky-400');
+      }
+    }
+
+    apiKeyBtn.addEventListener('click', () => {
+      userApiKeyInput.value = localStorage.getItem('voxsynth_gemini_api_key') || '';
+      apiModal.classList.remove('hidden');
+    });
+
+    closeModalBtn.addEventListener('click', () => {
+      apiModal.classList.add('hidden');
+    });
+
+    saveKeyBtn.addEventListener('click', () => {
+      const val = userApiKeyInput.value.trim();
+      if (val) {
+        localStorage.setItem('voxsynth_gemini_api_key', val);
+      }
+      updateApiKeyBadge();
+      apiModal.classList.add('hidden');
+      updateStatus('API Key Saved', 'emerald');
+    });
+
+    clearKeyBtn.addEventListener('click', () => {
+      localStorage.removeItem('voxsynth_gemini_api_key');
+      userApiKeyInput.value = '';
+      updateApiKeyBadge();
+    });
+
+    updateApiKeyBadge();
+
+    function initAudio() {
+      if (!audioCtx) {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AudioContext();
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 1024;
+        analyser.connect(audioCtx.destination);
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+
+    function getWordsArray() {
+      const raw = ttsInput.value.trim();
+      return raw ? raw.split(/\s+/) : ['Hello', 'world'];
+    }
+
+    function renderCaptionWords(activeIndex = -1) {
+      const words = getWordsArray();
+      wordStepIndicator.textContent = activeIndex >= 0 ? `Word ${activeIndex + 1} of ${words.length}` : `Ready (${words.length} words)`;
+
+      liveCaption.innerHTML = words.map((w, idx) => {
+        if (idx === activeIndex) {
+          return `<span class="bg-sky-400 text-slate-950 font-bold px-2 py-0.5 rounded-md shadow-sm">${escapeHtml(w)}</span>`;
+        }
+        return `<span class="text-slate-400 px-1">${escapeHtml(w)}</span>`;
+      }).join(' ');
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/[&<>"']/g, (m) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[m]));
+    }
+
+    function clearAllScheduled() {
+      scheduledTimeouts.forEach(t => clearTimeout(t));
+      scheduledTimeouts = [];
+      if (currentAudioSource) {
+        try { currentAudioSource.stop(); } catch (e) {}
+        currentAudioSource = null;
+      }
+    }
+
+    function updateStatus(text, color = 'emerald') {
+      const colorMap = {
+        emerald: 'bg-emerald-400',
+        sky: 'bg-sky-400 animate-ping',
+        amber: 'bg-amber-400',
+        rose: 'bg-rose-400'
+      };
+      statusBadge.innerHTML = `
+        <span class="w-2 h-2 rounded-full ${colorMap[color] || colorMap.emerald}"></span>
+        <span>${text}</span>
+      `;
+    }
+
+    async function synthesizeAndPlay() {
+      initAudio();
+      clearAllScheduled();
+      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+
+      const text = ttsInput.value.trim();
+      if (!text) return;
+
+      const voiceName = voiceSelect.value;
+      const persona = styleSelect.value;
+      const rate = parseFloat(rateSlider.value);
+      const pitch = parseFloat(pitchSlider.value);
+
+      voiceReadout.textContent = `Voice: ${voiceName}`;
+      isSpeaking = true;
+      updateStatus('Generating Neural Speech...', 'sky');
+      renderCaptionWords(-1);
+
+      let promptPrefix = "Say clearly: ";
+      if (persona === 'cheerful') promptPrefix = "Say cheerfully and with high enthusiasm: ";
+      else if (persona === 'whisper') promptPrefix = "Say in a spooky, mysterious whisper: ";
+      else if (persona === 'dramatic') promptPrefix = "Say with dramatic cinematic narration style: ";
+      else if (persona === 'bored') promptPrefix = "Say in a tired, bored, monotonous voice: ";
+      else if (persona === 'robot') promptPrefix = "Say in a robotic, mechanical android voice: ";
+
+      const fullPrompt = promptPrefix + text;
+
+      const activeKey = getActiveApiKey();
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${activeKey}`;
+      const payload = {
+        contents: [{ parts: [{ text: fullPrompt }] }],
+        generationConfig: {
+          responseModalities: ["AUDIO"],
+          speechConfig: {
+            voiceConfig: {
+              prebuiltVoiceConfig: { voiceName: voiceName }
+            }
+          }
+        }
+      };
+
+      try {
+        let response = null;
+        let delay = 1000;
+        for (let attempt = 0; attempt < 3; attempt++) {
+          response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          if (response.ok) break;
+          if (response.status === 400 || response.status === 403) break;
+          await new Promise(r => setTimeout(r, delay));
+          delay *= 2;
+        }
+
+        if (!response || !response.ok) {
+          if (!activeKey) {
+            apiModal.classList.remove('hidden');
+            throw new Error('Missing API Key');
+          }
+          throw new Error('TTS API failed');
+        }
+        const result = await response.json();
+        const part = result?.candidates?.[0]?.content?.parts?.[0];
+        const base64Audio = part?.inlineData?.data;
+        if (!base64Audio) throw new Error('No audio returned');
+
+        // Decode PCM 16-bit 24kHz audio
+        const binaryStr = atob(base64Audio);
+        const bytes = new Uint8Array(binaryStr.length);
+        for (let i = 0; i < binaryStr.length; i++) {
+          bytes[i] = binaryStr.charCodeAt(i);
+        }
+        const pcm16 = new Int16Array(bytes.buffer);
+        const audioBuffer = audioCtx.createBuffer(1, pcm16.length, 24000);
+        const channelData = audioBuffer.getChannelData(0);
+        for (let i = 0; i < pcm16.length; i++) {
+          channelData[i] = pcm16[i] / 32768.0;
+        }
+
+        const source = audioCtx.createBufferSource();
+        source.buffer = audioBuffer;
+        source.playbackRate.value = rate;
+        
+        // Connect to analyser for oscilloscope
+        source.connect(analyser);
+        currentAudioSource = source;
+
+        updateStatus(`Playing (${voiceName})`, 'sky');
+        freqReadout.textContent = `24kHz • ${(rate * 100).toFixed(0)}% Speed`;
+
+        const words = getWordsArray();
+        const totalDurMs = (audioBuffer.duration / rate) * 1000;
+        const stepMs = totalDurMs / Math.max(1, words.length);
+
+        words.forEach((w, idx) => {
+          const t = setTimeout(() => {
+            renderCaptionWords(idx);
+          }, idx * stepMs);
+          scheduledTimeouts.push(t);
+        });
+
+        source.onended = () => {
+          isSpeaking = false;
+          currentAudioSource = null;
+          updateStatus('Engine Ready', 'emerald');
+          freqReadout.textContent = 'Idle • 24kHz';
+          renderCaptionWords(-1);
+        };
+
+        source.start(0);
+      } catch (err) {
+        isSpeaking = false;
+        updateStatus('Generation Failed', 'rose');
+        freqReadout.textContent = 'Error • Retry';
+      }
+    }
+
+    speakBtn.addEventListener('click', synthesizeAndPlay);
+
+    stopBtn.addEventListener('click', () => {
+      clearAllScheduled();
+      isSpeaking = false;
+      updateStatus('Stopped', 'amber');
+      freqReadout.textContent = 'Idle • 24kHz';
+      renderCaptionWords(-1);
+    });
+
+    // Quick Voice Buttons
+    document.querySelectorAll('.quick-voice-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const v = btn.dataset.voice;
+        voiceSelect.value = v;
+        synthesizeAndPlay();
+      });
+    });
+
+    // Preset Phrases
+    document.querySelectorAll('.preset-phrase').forEach(btn => {
+      btn.addEventListener('click', () => {
+        ttsInput.value = btn.dataset.text;
+        synthesizeAndPlay();
+      });
+    });
+
+    // Sample Scripts Cycler
+    const samples = [
+      "Hello human, welcome to VoxSynth Studio powered by advanced Gemini neural text to speech.",
+      "Around the world, artificial intelligence is transforming how computers speak and understand human language.",
+      "The quick brown fox jumps over the lazy dog with exceptional clarity and natural intonation.",
+      "Deep neural audio models generate broadcast-quality voices instantly in your browser."
+    ];
+    let sampleIdx = 0;
+    sampleTextBtn.addEventListener('click', () => {
+      sampleIdx = (sampleIdx + 1) % samples.length;
+      ttsInput.value = samples[sampleIdx];
+      renderCaptionWords(-1);
+    });
+
+    ttsInput.addEventListener('input', () => renderCaptionWords(-1));
+
+    rateSlider.addEventListener('input', () => rateVal.textContent = parseFloat(rateSlider.value).toFixed(1) + 'x');
+    pitchSlider.addEventListener('input', () => pitchVal.textContent = parseFloat(pitchSlider.value).toFixed(1) + 'x');
+
+    // Visualizer Oscilloscope
+    function resizeCanvas() {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      canvas.width = rect.width * (window.devicePixelRatio || 1);
+      canvas.height = rect.height * (window.devicePixelRatio || 1);
+    }
+    window.addEventListener('resize', resizeCanvas);
+
+    function drawVisualizer() {
+      requestAnimationFrame(drawVisualizer);
+
+      const width = canvas.width;
+      const height = canvas.height;
+      ctx.fillStyle = '#020617';
+      ctx.fillRect(0, 0, width, height);
+
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, height / 2);
+      ctx.lineTo(width, height / 2);
+      ctx.stroke();
+
+      ctx.lineWidth = 2.5 * (window.devicePixelRatio || 1);
+      ctx.strokeStyle = '#38bdf8';
+      ctx.shadowColor = '#38bdf8';
+      ctx.shadowBlur = 8;
+      ctx.beginPath();
+
+      if (analyser && isSpeaking) {
+        const bufferLength = analyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+        analyser.getByteTimeDomainData(dataArray);
+
+        const sliceWidth = width / bufferLength;
+        let x = 0;
+        for (let i = 0; i < bufferLength; i++) {
+          const v = dataArray[i] / 128.0;
+          const y = (v * height) / 2;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+          x += sliceWidth;
+        }
+      } else {
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = '#1e293b';
+        ctx.moveTo(0, height / 2);
+        ctx.lineTo(width, height / 2);
+      }
+
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    }
+
+    window.onload = function () {
+      resizeCanvas();
+      renderCaptionWords(-1);
+      drawVisualizer();
+    };
+  </script>
+</body>
+</html>
