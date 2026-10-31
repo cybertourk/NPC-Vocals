@@ -166,12 +166,33 @@
                 <div class="lg:col-span-2">
                   <label class="block text-xs font-medium text-slate-400 uppercase mb-1">Race / Accent Overlay</label>
                   <select id="npc-race-input" class="w-full rounded-xl bg-slate-900 border border-slate-700 p-2.5 text-sm text-slate-100 focus:outline-none focus:border-sky-400">
-                    <option value="human">Human (Standard Delivery)</option>
-                    <option value="elf">High Elf (Elegant, haughty, precise diction)</option>
-                    <option value="dwarf">Dwarf (Gruff, heavy Scottish accent)</option>
-                    <option value="orc">Orc (Guttural snarl, monstrous, aggressive)</option>
-                    <option value="goblin">Goblin (Raspy, manic, twitchy)</option>
-                    <option value="vampire">Vampire (Smooth, aristocratic, Transylvanian)</option>
+                    <optgroup label="Core Races (5.5e)">
+                      <option value="human">Human (Standard Delivery)</option>
+                      <option value="elf">Elf (Elegant, precise diction)</option>
+                      <option value="dwarf">Dwarf (Gruff, heavy Scottish accent)</option>
+                      <option value="halfling">Halfling (Cheerful, upbeat, rustic)</option>
+                      <option value="gnome">Gnome (Fast-paced, eccentric, high energy)</option>
+                      <option value="orc">Orc (Guttural snarl, monstrous, aggressive)</option>
+                      <option value="dragonborn">Dragonborn (Deep, resonant, reptilian rumble)</option>
+                      <option value="tiefling">Tiefling (Slightly sinister, smooth, persuasive)</option>
+                      <option value="goliath">Goliath (Booming, stoic, giant-like)</option>
+                      <option value="aasimar">Aasimar (Ethereal, resonant, divine echo)</option>
+                    </optgroup>
+                    <optgroup label="Human Ethnicities (Forgotten Realms)">
+                      <option value="calishite">Human - Calishite (Middle Eastern / Arabic flair)</option>
+                      <option value="chondathan">Human - Chondathan (Standard Faerûn / British)</option>
+                      <option value="damaran">Human - Damaran (Eastern European / Slavic)</option>
+                      <option value="illuskan">Human - Illuskan (Nordic / Scandinavian)</option>
+                      <option value="mulan">Human - Mulan (North African / Egyptian)</option>
+                      <option value="rashemi">Human - Rashemi (Thick Slavic / Russian)</option>
+                      <option value="shou">Human - Shou (East Asian / Chinese)</option>
+                      <option value="tethyrian">Human - Tethyrian (Coastal / Standard)</option>
+                      <option value="turami">Human - Turami (Southern European / Italian)</option>
+                    </optgroup>
+                    <optgroup label="Monsters & Others">
+                      <option value="goblin">Goblin (Raspy, manic, twitchy)</option>
+                      <option value="vampire">Vampire (Smooth, aristocratic, Transylvanian)</option>
+                    </optgroup>
                   </select>
                 </div>
 
@@ -684,9 +705,30 @@
     // Constructs the complex hidden prompt based on Race and Style
     function buildDirectorPrompt(style, race, baseText) {
       let raceDirective = "acting as a human";
+      
+      // Core Races
       if (race === 'elf') raceDirective = "acting as an elegant, haughty High Elf with precise diction";
       if (race === 'dwarf') raceDirective = "acting as a gruff fantasy Dwarf with a heavy Scottish accent";
+      if (race === 'halfling') raceDirective = "acting as a cheerful, rustic Halfling with a warm, friendly voice";
+      if (race === 'gnome') raceDirective = "acting as an eccentric, fast-talking Gnome";
       if (race === 'orc') raceDirective = "acting as a brutal fantasy Orc with a guttural, snarling, monstrous voice";
+      if (race === 'dragonborn') raceDirective = "acting as a proud Dragonborn with a deep, resonant, slightly reptilian rumble";
+      if (race === 'tiefling') raceDirective = "acting as a Tiefling with a smooth, slightly sinister and persuasive voice";
+      if (race === 'goliath') raceDirective = "acting as a massive Goliath with a stoic, booming, powerful voice";
+      if (race === 'aasimar') raceDirective = "acting as an Aasimar with an ethereal, resonant, and divine voice";
+
+      // Human Ethnicities (Forgotten Realms)
+      if (race === 'calishite') raceDirective = "acting as a human with a Middle Eastern or Arabic accent";
+      if (race === 'chondathan') raceDirective = "acting as a human with a standard British fantasy accent";
+      if (race === 'damaran') raceDirective = "acting as a human with an Eastern European or Slavic accent";
+      if (race === 'illuskan') raceDirective = "acting as a human with a harsh Nordic or Scandinavian accent";
+      if (race === 'mulan') raceDirective = "acting as a human with a North African or Egyptian accent";
+      if (race === 'rashemi') raceDirective = "acting as a human with a thick, gruff Russian or Slavic accent";
+      if (race === 'shou') raceDirective = "acting as a human with an East Asian or Chinese accent";
+      if (race === 'tethyrian') raceDirective = "acting as a human with a standard, neutral Western accent";
+      if (race === 'turami') raceDirective = "acting as a human with a romantic Southern European or Italian accent";
+
+      // Monsters
       if (race === 'goblin') raceDirective = "acting as a manic, raspy, twitchy fantasy Goblin";
       if (race === 'vampire') raceDirective = "acting as a smooth, aristocratic Vampire with a Transylvanian accent";
 
