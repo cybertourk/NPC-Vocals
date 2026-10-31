@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>VoxSynth Studio - Gemini Neural TTS Engine</title>
+  <title>VoxSynth Studio - NPC Soundboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
@@ -12,344 +12,549 @@
       color: #f8fafc;
       font-family: 'Inter', system-ui, -apple-system, sans-serif;
     }
-    .font-mono {
-      font-family: 'JetBrains Mono', monospace;
-    }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
     .synth-panel {
       background: linear-gradient(145deg, #131c2e, #0d1322);
       border: 1px solid #1e293b;
-      box-shadow: 0 12px 30px -8px rgba(0, 0, 0, 0.6);
     }
-    input[type="range"] {
-      accent-color: #38bdf8;
-      cursor: pointer;
-    }
-    .key-btn {
-      user-select: none;
-      -webkit-user-select: none;
-      touch-action: manipulation;
-    }
-    .key-btn:active, .key-btn.active {
-      background-color: #38bdf8 !important;
-      color: #090d16 !important;
-      border-color: #7dd3fc !important;
-      transform: translateY(2px);
-      box-shadow: 0 0 15px rgba(56, 189, 248, 0.5);
-    }
+    .scrollbar-hide::-webkit-scrollbar { display: none; }
+    .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+    input[type="range"] { accent-color: #38bdf8; cursor: pointer; }
+    
+    /* Custom Modal */
+    .modal-overlay { background-color: rgba(2, 6, 23, 0.85); backdrop-filter: blur(4px); }
   </style>
 </head>
-<body class="min-h-screen p-3 sm:p-6 md:p-8 flex flex-col items-center">
+<body class="h-screen w-full flex overflow-hidden">
 
-  <div class="max-w-5xl w-full space-y-5">
-    
-    <!-- Studio Header -->
-    <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-800 pb-4 gap-3">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-400 to-indigo-600 flex items-center justify-center shadow-lg shadow-sky-500/20">
-          <svg class="w-6 h-6 text-slate-950" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path>
-          </svg>
-        </div>
-        <div>
-          <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight bg-gradient-to-r from-sky-400 via-cyan-300 to-indigo-400 bg-clip-text text-transparent">
-            VOXSYNTH STUDIO
-          </h1>
-          <p class="text-slate-400 text-xs sm:text-sm">Gemini Neural Studio TTS & Advanced Voice Modulator</p>
-        </div>
+  <!-- Sidebar: Campaigns & NPCs -->
+  <aside class="w-64 bg-slate-900 border-r border-slate-800 flex flex-col h-full flex-shrink-0">
+    <div class="p-4 border-b border-slate-800 flex items-center gap-3">
+      <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-sky-400 to-indigo-600 flex items-center justify-center shadow-lg shadow-sky-500/20">
+        <svg class="w-4 h-4 text-slate-950" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path>
+        </svg>
       </div>
-      <div class="flex items-center space-x-3 self-end sm:self-auto">
-        <button id="api-key-btn" class="px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-sky-400 border border-slate-700 transition flex items-center gap-1.5" title="Configure Gemini API Key for external hosting">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
-          </svg>
+      <h1 class="text-sm font-extrabold tracking-tight bg-gradient-to-r from-sky-400 to-indigo-400 bg-clip-text text-transparent uppercase">
+        VoxSynth NPC
+      </h1>
+    </div>
+
+    <!-- Campaigns List -->
+    <div class="flex-1 overflow-y-auto p-3 space-y-4 scrollbar-hide" id="campaigns-container">
+      <!-- Populated by JS -->
+    </div>
+
+    <div class="p-3 border-t border-slate-800">
+      <button onclick="promptNewCampaign()" class="w-full py-2 bg-slate-800 hover:bg-slate-700 text-sky-400 text-xs font-bold rounded-lg border border-slate-700 transition">
+        + New Campaign
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main Content Area -->
+  <main class="flex-1 flex flex-col h-full relative overflow-hidden bg-[#090d16]">
+    
+    <!-- Top Header -->
+    <header class="h-16 border-b border-slate-800 flex justify-between items-center px-6 flex-shrink-0 bg-slate-900/50">
+      <div id="active-npc-breadcrumb" class="text-sm font-medium text-slate-400">
+        Select an NPC to begin...
+      </div>
+      <div class="flex items-center gap-3">
+        <button id="api-key-btn" class="px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-sky-400 border border-slate-700 transition flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
           <span id="api-key-status">API Key</span>
         </button>
-        <span id="status-badge" class="px-3.5 py-1.5 rounded-full text-xs font-semibold bg-slate-800/90 text-slate-300 border border-slate-700 flex items-center gap-2">
-          <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-          <span>Neural Engine Ready</span>
-        </span>
       </div>
     </header>
 
-    <!-- API Key Modal (For GitHub Pages / External Hosting) -->
-    <div id="api-modal" class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-      <div class="synth-panel rounded-2xl max-w-md w-full p-6 space-y-4 border border-slate-700">
-        <div class="flex justify-between items-center">
-          <h3 class="text-lg font-bold text-white flex items-center gap-2">
-            <svg class="w-5 h-5 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
-            </svg>
-            Gemini API Key Setup
-          </h3>
-          <button id="close-modal-btn" class="text-slate-400 hover:text-white text-sm">✕</button>
-        </div>
-        <p class="text-xs text-slate-300 leading-relaxed">
-          When hosting on <strong>GitHub Pages</strong>, enter your free Google AI Studio API Key below. It is saved privately in your browser's <code class="text-sky-400">localStorage</code> and never shared in public code.
-        </p>
-        <div>
-          <label for="user-api-key" class="block text-xs font-medium text-slate-400 uppercase mb-1">Your Gemini API Key</label>
-          <input id="user-api-key" type="password" placeholder="AIzaSy..." 
-            class="w-full rounded-xl bg-slate-900 border border-slate-700 p-2.5 text-sm text-slate-100 font-mono focus:outline-none focus:border-sky-400">
-        </div>
-        <div class="flex justify-between items-center pt-2 gap-2">
-          <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener noreferrer" class="text-xs text-sky-400 hover:underline">
-            Get a free key at Google AI Studio →
-          </a>
-          <div class="flex gap-2">
-            <button id="clear-key-btn" class="px-3 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300">
-              Clear
-            </button>
-            <button id="save-key-btn" class="px-4 py-2 rounded-xl text-xs font-bold bg-sky-400 hover:bg-sky-300 text-slate-950">
-              Save Key
-            </button>
-          </div>
-        </div>
-      </div>
+    <!-- Welcome / Empty State -->
+    <div id="empty-state" class="flex-1 flex flex-col items-center justify-center p-8 text-center">
+      <svg class="w-16 h-16 text-slate-700 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+      <h2 class="text-xl font-bold text-white mb-2">Campaign Soundboard Manager</h2>
+      <p class="text-slate-400 text-sm max-w-md">Create a campaign on the left, add NPC profiles, and generate custom neural voice lines to build your interactive soundboard.</p>
     </div>
 
-    <!-- Real-Time Oscilloscope & Word Stream Readout -->
-    <div class="synth-panel rounded-2xl p-4 relative overflow-hidden">
-      <div class="flex flex-wrap justify-between items-center mb-2 gap-2">
-        <span class="text-xs font-mono uppercase tracking-wider text-sky-400 flex items-center gap-1.5">
-          <span class="inline-block w-2 h-2 rounded-full bg-sky-400 animate-ping"></span>
-          Real-Time Neural Audio Waveform Scope
-        </span>
-        <div class="flex items-center gap-2">
-          <span id="voice-readout" class="text-xs font-mono text-indigo-300 bg-indigo-950/80 px-2.5 py-0.5 rounded border border-indigo-700/50">
-            Voice: Kore (Firm)
-          </span>
-          <span id="freq-readout" class="text-xs font-mono text-slate-400 bg-slate-900/80 px-2.5 py-0.5 rounded border border-slate-800">
-            Idle • 24kHz
-          </span>
-        </div>
-      </div>
-      <div class="w-full h-32 sm:h-36 bg-slate-950 rounded-xl border border-slate-800/80 overflow-hidden relative">
-        <canvas id="visualizer" class="w-full h-full block"></canvas>
-      </div>
-    </div>
-
-    <!-- Main Studio Controls Grid -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+    <!-- Active NPC Workspace -->
+    <div id="npc-workspace" class="hidden flex-1 flex flex-col h-full overflow-hidden">
       
-      <!-- Left/Center Column: Script & Gemini TTS (7 cols) -->
-      <div class="lg:col-span-7 synth-panel rounded-2xl p-5 sm:p-6 space-y-4 flex flex-col justify-between">
-        <div class="space-y-4">
-          <div class="flex justify-between items-center flex-wrap gap-2">
-            <h2 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-              <svg class="w-5 h-5 text-sky-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"></path>
-              </svg>
-              Neural Script & Voice Generator
+      <div class="flex-1 overflow-y-auto p-6 space-y-6">
+        <!-- NPC Settings Panel -->
+        <div class="synth-panel rounded-2xl p-5">
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="text-lg font-bold text-white flex items-center gap-2">
+              <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+              NPC Voice Profile
             </h2>
-            <button id="sample-text-btn" class="text-xs font-medium text-sky-400 hover:text-sky-300 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 px-2.5 py-1 rounded-lg transition">
-              Cycle Sample Scripts
+            <button onclick="saveNpcSettings()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-sky-400 text-xs font-bold rounded-lg transition">Save Profile Changes</button>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div>
+              <label class="block text-xs font-medium text-slate-400 uppercase mb-1">NPC Name</label>
+              <input type="text" id="npc-name-input" class="w-full rounded-xl bg-slate-900 border border-slate-700 p-2.5 text-sm text-slate-100 focus:outline-none focus:border-sky-400">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-400 uppercase mb-1">Voice Model</label>
+              <select id="npc-voice-input" class="w-full rounded-xl bg-slate-900 border border-slate-700 p-2.5 text-sm text-slate-100 focus:outline-none focus:border-sky-400">
+                <option value="Kore">Kore — Firm</option>
+                <option value="Zephyr">Zephyr — Bright</option>
+                <option value="Orus">Orus — Deep, Firm</option>
+                <option value="Charon">Charon — Deep, Informative</option>
+                <option value="Puck">Puck — Upbeat</option>
+                <option value="Aoede">Aoede — Breezy</option>
+                <option value="Fenrir">Fenrir — Bold</option>
+                <option value="Algenib">Algenib — Gravelly</option>
+                <option value="Vindemiatrix">Vindemiatrix — Gentle</option>
+                <option value="Gacrux">Gacrux — Mature</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-400 uppercase mb-1">Default Delivery</label>
+              <select id="npc-style-input" class="w-full rounded-xl bg-slate-900 border border-slate-700 p-2.5 text-sm text-slate-100 focus:outline-none focus:border-sky-400">
+                <option value="neutral">Neutral / Professional</option>
+                <option value="whisper">Spooky / Whisper</option>
+                <option value="dramatic">Dramatic Narration</option>
+                <option value="angry">Angry / Aggressive</option>
+                <option value="cheerful">Cheerful / Happy</option>
+                <option value="bored">Tired / Bored</option>
+              </select>
+            </div>
+            <div class="flex gap-3">
+              <div class="flex-1">
+                <div class="flex justify-between text-[10px] text-slate-400 mb-1"><span>PITCH</span><span id="npc-pitch-val">1.0</span></div>
+                <input id="npc-pitch-input" type="range" min="0.7" max="1.5" step="0.1" value="1.0" class="w-full" oninput="document.getElementById('npc-pitch-val').innerText = this.value">
+              </div>
+              <div class="flex-1">
+                <div class="flex justify-between text-[10px] text-slate-400 mb-1"><span>SPEED</span><span id="npc-rate-val">1.0</span></div>
+                <input id="npc-rate-input" type="range" min="0.5" max="2.0" step="0.1" value="1.0" class="w-full" oninput="document.getElementById('npc-rate-val').innerText = this.value">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Generator Section -->
+        <div class="synth-panel rounded-2xl p-5 border border-sky-900/50 bg-sky-900/10">
+          <label class="block text-xs font-bold text-sky-400 uppercase mb-2">Generate New Voice Line</label>
+          <div class="flex flex-col sm:flex-row gap-3">
+            <textarea id="tts-input" rows="2" class="flex-1 rounded-xl bg-slate-900/90 border border-slate-700/80 p-3 text-sm text-slate-100 focus:outline-none focus:border-sky-400 resize-none" placeholder="Type dialogue here..."></textarea>
+            <button id="generate-btn" onclick="generateVoiceLine()" class="sm:w-32 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold py-3 px-4 rounded-xl transition text-sm flex flex-col items-center justify-center gap-1 shadow-lg shadow-sky-500/20">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
+              <span>Generate</span>
             </button>
           </div>
-
-          <!-- Text Input Box -->
-          <div>
-            <label for="tts-input" class="block text-xs font-medium text-slate-400 uppercase mb-1.5">Text to Synthesize</label>
-            <textarea id="tts-input" rows="2" 
-              class="w-full rounded-xl bg-slate-900/90 border border-slate-700/80 p-3 text-sm sm:text-base text-slate-100 placeholder-slate-500 focus:outline-none focus:border-sky-400 transition resize-none"
-              placeholder="Type anything here for Gemini to speak...">Hello human, welcome to VoxSynth Studio powered by advanced Gemini neural text to speech.</textarea>
-          </div>
-
-          <!-- Live Word Tracking Box -->
-          <div class="bg-slate-950/80 border border-slate-800/90 rounded-xl p-3 space-y-1.5">
-            <div class="flex justify-between items-center text-[11px] font-mono text-slate-400 uppercase">
-              <span>Active Word Stream & Timing</span>
-              <span id="word-step-indicator" class="text-sky-400">Ready</span>
-            </div>
-            <div id="live-caption" class="text-xs sm:text-sm text-slate-300 font-mono leading-relaxed min-h-[2rem] flex flex-wrap items-center gap-1.5">
-              <!-- Populated dynamically -->
-            </div>
-          </div>
-
-          <!-- Expanded Voice Options Grid -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-            <div>
-              <label for="voice-select" class="block text-xs font-medium text-slate-400 uppercase mb-1">Gemini Studio Voice Model</label>
-              <select id="voice-select" class="w-full rounded-xl bg-slate-900 border border-sky-500/50 p-2.5 text-xs sm:text-sm text-slate-100 focus:outline-none focus:border-sky-400">
-                <option value="Kore">Kore — Firm, Authoritative & Clear</option>
-                <option value="Zephyr">Zephyr — Bright, Clear & Articulate</option>
-                <option value="Puck">Puck — Upbeat, Energetic & Youthful</option>
-                <option value="Charon">Charon — Informative, Deep & Steady</option>
-                <option value="Fenrir">Fenrir — Excitable, Dynamic & Bold</option>
-                <option value="Aoede">Aoede — Breezy, Melodic & Warm</option>
-                <option value="Leda">Leda — Youthful & Crisp</option>
-                <option value="Orus">Orus — Deep, Firm & Resonant</option>
-                <option value="Callirrhoe">Callirrhoe — Easy-going & Natural</option>
-                <option value="Autonoe">Autonoe — Bright & Friendly</option>
-                <option value="Enceladus">Enceladus — Breathy & Ambient</option>
-                <option value="Iapetus">Iapetus — Crystal Clear & Direct</option>
-                <option value="Umbriel">Umbriel — Casual & Relaxed</option>
-                <option value="Algieba">Algieba — Smooth & Professional</option>
-                <option value="Despina">Despina — Soft & Smooth</option>
-                <option value="Erinome">Erinome — Crisp & Articulate</option>
-                <option value="Algenib">Algenib — Gravelly & Distinctive</option>
-                <option value="Rasalgethi">Rasalgethi — Informative & Balanced</option>
-                <option value="Laomedeia">Laomedeia — Upbeat & Cheerful</option>
-                <option value="Achernar">Achernar — Soft & Gentle</option>
-                <option value="Alnilam">Alnilam — Firm & Authoritative</option>
-                <option value="Schedar">Schedar — Even & Measured</option>
-                <option value="Gacrux">Gacrux — Mature & Grounded</option>
-                <option value="Pulcherrima">Pulcherrima — Forward & Distinct</option>
-                <option value="Achird">Achird — Friendly & Approachable</option>
-                <option value="Zubenelgenubi">Zubenelgenubi — Casual & Warm</option>
-                <option value="Vindemiatrix">Vindemiatrix — Gentle & Soothing</option>
-                <option value="Sadachbia">Sadachbia — Lively & Dynamic</option>
-                <option value="Sadaltager">Sadaltager — Knowledgeable & Expert</option>
-                <option value="Sulafat">Sulafat — Warm & Rich</option>
-              </select>
-            </div>
-            <div>
-              <label for="style-select" class="block text-xs font-medium text-slate-400 uppercase mb-1">Delivery Persona / Emotion</label>
-              <select id="style-select" class="w-full rounded-xl bg-slate-900 border border-slate-700 p-2.5 text-xs sm:text-sm text-slate-100 focus:outline-none focus:border-sky-400">
-                <option value="neutral">Natural Studio (Professional)</option>
-                <option value="cheerful">Cheerful & Enthusiastic</option>
-                <option value="whisper">Spooky / Mystery Whisper</option>
-                <option value="dramatic">Dramatic & Cinematic Narration</option>
-                <option value="bored">Tired & Bored Monotone</option>
-                <option value="robot">Robotic Android Announcement</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- Parameter Sliders -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
-            <div class="bg-slate-900/70 p-3 rounded-xl border border-slate-800">
-              <div class="flex justify-between text-xs mb-1.5">
-                <span class="text-slate-400 font-medium">PLAYBACK SPEED</span>
-                <span id="rate-val" class="font-mono text-sky-400 font-bold">1.0x</span>
-              </div>
-              <input id="rate-slider" type="range" min="0.5" max="2.0" step="0.1" value="1.0" class="w-full">
-            </div>
-
-            <div class="bg-slate-900/70 p-3 rounded-xl border border-slate-800">
-              <div class="flex justify-between text-xs mb-1.5">
-                <span class="text-slate-400 font-medium">PITCH SHIFT (VIRTUAL)</span>
-                <span id="pitch-val" class="font-mono text-sky-400 font-bold">1.0x</span>
-              </div>
-              <input id="pitch-slider" type="range" min="0.7" max="1.5" step="0.1" value="1.0" class="w-full">
-            </div>
-          </div>
         </div>
 
-        <!-- Transport Action Bar -->
-        <div class="flex flex-wrap gap-2.5 pt-4 border-t border-slate-800/80">
-          <button id="speak-btn" class="flex-1 min-w-[150px] bg-gradient-to-r from-sky-400 to-cyan-400 hover:from-sky-300 hover:to-cyan-300 text-slate-950 font-bold py-3 px-4 rounded-xl shadow-lg shadow-sky-500/20 transition flex items-center justify-center gap-2 text-sm">
-            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path>
-            </svg>
-            Synthesize Neural Speech
-          </button>
-          <button id="stop-btn" class="bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 font-semibold py-3 px-4 rounded-xl text-sm transition">
-            Stop Audio
-          </button>
+        <!-- Soundboard -->
+        <div>
+          <h2 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+            <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            NPC Soundboard
+          </h2>
+          <div id="soundboard-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            <!-- Voice lines populated here -->
+          </div>
         </div>
       </div>
+    </div>
+  </main>
 
-      <!-- Right Column: Quick Phrases & Voice Showcase (5 cols) -->
-      <div class="lg:col-span-5 synth-panel rounded-2xl p-5 sm:p-6 flex flex-col justify-between space-y-5">
-        <div class="space-y-4">
-          <div class="flex justify-between items-start gap-2">
-            <div>
-              <h2 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-                <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path>
-                </svg>
-                Voice Model Showcase
-              </h2>
-              <p class="text-xs text-slate-400 mt-0.5">
-                Quick-test different neural voices with studio presets.
-              </p>
-            </div>
-          </div>
+  <!-- Modals -->
 
-          <!-- Quick Voice Test Buttons -->
-          <div>
-            <label class="block text-xs font-medium text-slate-400 uppercase mb-2">Featured Studio Voices</label>
-            <div class="grid grid-cols-2 gap-2" id="quick-voices">
-              <button data-voice="Kore" class="quick-voice-btn p-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-left transition flex flex-col">
-                <span class="text-xs font-bold text-sky-400">Kore</span>
-                <span class="text-[10px] text-slate-400">Firm & Authoritative</span>
-              </button>
-              <button data-voice="Zephyr" class="quick-voice-btn p-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-left transition flex flex-col">
-                <span class="text-xs font-bold text-sky-400">Zephyr</span>
-                <span class="text-[10px] text-slate-400">Bright & Clear</span>
-              </button>
-              <button data-voice="Puck" class="quick-voice-btn p-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-left transition flex flex-col">
-                <span class="text-xs font-bold text-indigo-400">Puck</span>
-                <span class="text-[10px] text-slate-400">Upbeat & Energetic</span>
-              </button>
-              <button data-voice="Charon" class="quick-voice-btn p-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 border border-slate-700 text-left transition flex flex-col">
-                <span class="text-xs font-bold text-indigo-400">Charon</span>
-                <span class="text-[10px] text-slate-400">Deep & Informative</span>
-              </button>
-            </div>
-          </div>
-
-          <!-- Preset Sentences -->
-          <div>
-            <label class="block text-xs font-medium text-slate-400 uppercase mb-2">Test Sentences</label>
-            <div class="space-y-2">
-              <button data-text="Synthetic voices and neural speech synthesis are changing how we interact with technology." class="preset-phrase w-full p-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-800 text-xs text-left text-slate-300 transition">
-                "Synthetic voices and neural speech synthesis..."
-              </button>
-              <button data-text="Around the world, digital audio generators create crystal clear human speech." class="preset-phrase w-full p-2.5 rounded-xl bg-slate-900/80 hover:bg-slate-800 border border-slate-800 text-xs text-left text-slate-300 transition">
-                "Around the world, digital audio generators..."
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Audio Info Footer -->
-        <div class="pt-3 border-t border-slate-800/80 text-[11px] text-slate-400 flex justify-between items-center">
-          <span>Format: 24kHz PCM Audio</span>
-          <span class="text-sky-400">Gemini 2.5 Flash TTS</span>
-        </div>
+  <!-- API Key Modal -->
+  <div id="api-modal" class="hidden fixed inset-0 z-50 modal-overlay flex items-center justify-center p-4">
+    <div class="synth-panel rounded-2xl max-w-md w-full p-6 space-y-4">
+      <div class="flex justify-between items-center">
+        <h3 class="text-lg font-bold text-white">Gemini API Key</h3>
+        <button onclick="closeModal('api-modal')" class="text-slate-400 hover:text-white">✕</button>
       </div>
-
+      <p class="text-xs text-slate-300">Required to generate voices. Saved locally in your browser.</p>
+      <input id="user-api-key" type="password" placeholder="AIzaSy..." class="w-full rounded-xl bg-slate-900 border border-slate-700 p-2.5 text-sm text-slate-100 font-mono focus:outline-none focus:border-sky-400">
+      <div class="flex justify-between items-center pt-2">
+        <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-xs text-sky-400 hover:underline">Get a free key →</a>
+        <button onclick="saveApiKey()" class="px-4 py-2 rounded-xl text-xs font-bold bg-sky-400 hover:bg-sky-300 text-slate-950">Save Key</button>
+      </div>
     </div>
   </div>
 
-  <script>
-    let audioCtx = null;
-    let analyser = null;
-    let currentAudioSource = null;
-    let isSpeaking = false;
-    let scheduledTimeouts = [];
+  <!-- Custom Input Modal (Generic) -->
+  <div id="input-modal" class="hidden fixed inset-0 z-50 modal-overlay flex items-center justify-center p-4">
+    <div class="synth-panel rounded-2xl max-w-sm w-full p-6 space-y-4">
+      <h3 id="input-modal-title" class="text-lg font-bold text-white">Enter Value</h3>
+      <input id="input-modal-value" type="text" class="w-full rounded-xl bg-slate-900 border border-slate-700 p-2.5 text-sm text-slate-100 focus:outline-none focus:border-sky-400">
+      <div class="flex justify-end gap-2 pt-2">
+        <button onclick="closeModal('input-modal')" class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300">Cancel</button>
+        <button id="input-modal-submit" class="px-4 py-2 rounded-xl text-xs font-bold bg-sky-400 hover:bg-sky-300 text-slate-950">Confirm</button>
+      </div>
+    </div>
+  </div>
 
-    const ttsInput = document.getElementById('tts-input');
-    const voiceSelect = document.getElementById('voice-select');
-    const styleSelect = document.getElementById('style-select');
-    const rateSlider = document.getElementById('rate-slider');
-    const pitchSlider = document.getElementById('pitch-slider');
+  <!-- Scripts -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    const rateVal = document.getElementById('rate-val');
-    const pitchVal = document.getElementById('pitch-val');
-    const statusBadge = document.getElementById('status-badge');
-    const liveCaption = document.getElementById('live-caption');
-    const freqReadout = document.getElementById('freq-readout');
-    const voiceReadout = document.getElementById('voice-readout');
-    const wordStepIndicator = document.getElementById('word-step-indicator');
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'voxsynth-studio-app';
+    const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+    
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    let userId = null;
 
-    const speakBtn = document.getElementById('speak-btn');
-    const stopBtn = document.getElementById('stop-btn');
-    const sampleTextBtn = document.getElementById('sample-text-btn');
-    const canvas = document.getElementById('visualizer');
-    const ctx = canvas.getContext('2d');
+    // --- STATE MANAGEMENT ---
+    let appState = {
+      campaigns: [],
+      npcs: [],
+      lines: [],
+      activeCampaignId: null,
+      activeNpcId: null
+    };
 
-    // API Key Modal Elements for GitHub Hosting
+    const defaultApiKey = ""; 
+    function generateId() { return crypto.randomUUID(); }
+
+    // --- FIREBASE INIT ---
+    async function initAuth() {
+      try {
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+          await signInAnonymously(auth);
+        }
+        userId = auth.currentUser.uid;
+        setupSubscriptions();
+      } catch (err) {
+        console.error("Auth error:", err);
+      }
+    }
+
+    function setupSubscriptions() {
+      if (!userId) return;
+
+      const campaignsRef = collection(db, 'artifacts', appId, 'users', userId, 'campaigns');
+      onSnapshot(campaignsRef, (snap) => {
+        appState.campaigns = snap.docs.map(d => d.data()).sort((a,b) => a.createdAt - b.createdAt);
+        renderSidebar();
+        renderWorkspace();
+      }, (err) => console.error(err));
+
+      const npcsRef = collection(db, 'artifacts', appId, 'users', userId, 'npcs');
+      onSnapshot(npcsRef, (snap) => {
+        appState.npcs = snap.docs.map(d => d.data()).sort((a,b) => a.createdAt - b.createdAt);
+        renderSidebar();
+        renderWorkspace();
+      }, (err) => console.error(err));
+
+      const linesRef = collection(db, 'artifacts', appId, 'users', userId, 'lines');
+      onSnapshot(linesRef, (snap) => {
+        appState.lines = snap.docs.map(d => {
+          const data = d.data();
+          if (!data.blobUrl && data.base64Audio && data.sampleRate) {
+             const binaryStr = atob(data.base64Audio);
+             const bytes = new Uint8Array(binaryStr.length);
+             for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+             const wavBlob = pcmToWav(bytes.buffer, data.sampleRate);
+             data.blobUrl = URL.createObjectURL(wavBlob);
+          }
+          return data;
+        }).sort((a,b) => a.createdAt - b.createdAt);
+        renderSoundboard();
+      }, (err) => console.error(err));
+    }
+
+    // --- UI RENDER FUNCTIONS ---
+    function renderSidebar() {
+      const container = document.getElementById('campaigns-container');
+      container.innerHTML = '';
+
+      appState.campaigns.forEach(camp => {
+        const campDiv = document.createElement('div');
+        campDiv.className = 'mb-4';
+        
+        campDiv.innerHTML = `
+          <div class="flex items-center justify-between text-xs font-bold text-slate-300 uppercase tracking-wider mb-2 px-2">
+            <span>${escapeHtml(camp.name)}</span>
+            <button onclick="deleteCampaign('${camp.id}')" class="text-slate-600 hover:text-rose-400 p-1" title="Delete Campaign">✕</button>
+          </div>
+          <div class="space-y-1" id="npc-list-${camp.id}"></div>
+          <button onclick="promptNewNPC('${camp.id}')" class="w-full mt-2 py-1.5 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-sky-400 text-xs rounded border border-slate-800 border-dashed transition flex items-center justify-center gap-1">
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg> Add NPC
+          </button>
+        `;
+        container.appendChild(campDiv);
+
+        const npcList = document.getElementById(`npc-list-${camp.id}`);
+        const campNpcs = appState.npcs.filter(n => n.campaignId === camp.id);
+        
+        campNpcs.forEach(npc => {
+          const isActive = npc.id === appState.activeNpcId;
+          const btn = document.createElement('button');
+          btn.className = `w-full text-left px-3 py-2 rounded-lg text-sm transition flex items-center gap-2 ${isActive ? 'bg-sky-500/20 text-sky-400 font-medium border border-sky-500/30' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'}`;
+          btn.innerHTML = `<svg class="w-4 h-4 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg> <span class="truncate">${escapeHtml(npc.name)}</span>`;
+          btn.onclick = () => selectNpc(camp.id, npc.id);
+          npcList.appendChild(btn);
+        });
+      });
+    }
+
+    window.selectNpc = function(campId, npcId) {
+      appState.activeCampaignId = campId;
+      appState.activeNpcId = npcId;
+      renderSidebar();
+      renderWorkspace();
+    };
+
+    function renderWorkspace() {
+      const camp = appState.campaigns.find(c => c.id === appState.activeCampaignId);
+      const npc = appState.npcs.find(n => n.id === appState.activeNpcId);
+
+      if (!npc || !camp) {
+        document.getElementById('empty-state').classList.remove('hidden');
+        document.getElementById('npc-workspace').classList.add('hidden');
+        document.getElementById('active-npc-breadcrumb').innerText = 'Select an NPC to begin...';
+        return;
+      }
+
+      document.getElementById('empty-state').classList.add('hidden');
+      document.getElementById('npc-workspace').classList.remove('hidden');
+      document.getElementById('active-npc-breadcrumb').innerText = `${camp.name} / ${npc.name}`;
+
+      document.getElementById('npc-name-input').value = npc.name;
+      document.getElementById('npc-voice-input').value = npc.voice;
+      document.getElementById('npc-style-input').value = npc.style;
+      document.getElementById('npc-pitch-input').value = npc.pitch;
+      document.getElementById('npc-pitch-val').innerText = npc.pitch;
+      document.getElementById('npc-rate-input').value = npc.rate;
+      document.getElementById('npc-rate-val').innerText = npc.rate;
+
+      renderSoundboard();
+    }
+
+    function renderSoundboard() {
+      const npc = appState.npcs.find(n => n.id === appState.activeNpcId);
+      if (!npc) return;
+      const npcLines = appState.lines.filter(l => l.npcId === npc.id);
+      
+      const grid = document.getElementById('soundboard-grid');
+      grid.innerHTML = '';
+      
+      if (npcLines.length === 0) {
+        grid.innerHTML = `<div class="col-span-full text-center p-8 text-slate-500 text-sm border border-dashed border-slate-700 rounded-xl">No voice lines generated yet. Type some dialogue and hit Generate!</div>`;
+        return;
+      }
+
+      npcLines.forEach((line) => {
+        const card = document.createElement('div');
+        card.className = 'bg-slate-800/50 border border-slate-700 rounded-xl p-4 flex flex-col justify-between';
+        card.innerHTML = `
+          <p class="text-sm text-slate-200 mb-4 line-clamp-3 italic">"${escapeHtml(line.text)}"</p>
+          <div class="flex items-center gap-2">
+            <button onclick="playAudio('${line.blobUrl}')" class="flex-1 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold py-2 px-3 rounded-lg text-xs flex items-center justify-center gap-1 transition">
+              <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
+              Play
+            </button>
+            <a href="${line.blobUrl}" download="${npc.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_line.wav" class="bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold py-2 px-3 rounded-lg text-xs flex items-center justify-center transition" title="Export as WAV">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4-4m0 0l-4-4m4 4V4"></path></svg>
+            </a>
+            <button onclick="deleteLine('${line.id}')" class="bg-rose-500/20 hover:bg-rose-500/40 text-rose-400 font-semibold py-2 px-3 rounded-lg text-xs transition">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+            </button>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    // --- ACTIONS ---
+    window.saveNpcSettings = async function() {
+      if (!userId || !appState.activeNpcId) return;
+      const npcRef = doc(db, 'artifacts', appId, 'users', userId, 'npcs', appState.activeNpcId);
+      
+      await setDoc(npcRef, {
+        id: appState.activeNpcId,
+        campaignId: appState.activeCampaignId,
+        name: document.getElementById('npc-name-input').value,
+        voice: document.getElementById('npc-voice-input').value,
+        style: document.getElementById('npc-style-input').value,
+        pitch: parseFloat(document.getElementById('npc-pitch-input').value),
+        rate: parseFloat(document.getElementById('npc-rate-input').value),
+        createdAt: appState.npcs.find(n => n.id === appState.activeNpcId).createdAt // Preserve sort order
+      }, { merge: true });
+    };
+
+    window.promptNewCampaign = function() {
+      openInputModal('New Campaign Name', async (val) => {
+        if (!val || !userId) return;
+        const newId = generateId();
+        const docRef = doc(db, 'artifacts', appId, 'users', userId, 'campaigns', newId);
+        await setDoc(docRef, { id: newId, name: val, createdAt: Date.now() });
+      });
+    };
+
+    window.deleteCampaign = async function(campId) {
+      if (!userId) return;
+      // In a full app you might delete the NPCs and Lines inside too. Here we just delete the parent.
+      await deleteDoc(doc(db, 'artifacts', appId, 'users', userId, 'campaigns', campId));
+      if (appState.activeCampaignId === campId) {
+        appState.activeCampaignId = null;
+        appState.activeNpcId = null;
+        renderWorkspace();
+      }
+    };
+
+    window.promptNewNPC = function(campId) {
+      openInputModal('New NPC Name', async (val) => {
+        if (!val || !userId) return;
+        const newId = generateId();
+        const docRef = doc(db, 'artifacts', appId, 'users', userId, 'npcs', newId);
+        await setDoc(docRef, { 
+          id: newId, campaignId: campId, name: val, 
+          voice: 'Kore', style: 'neutral', pitch: 1.0, rate: 1.0, createdAt: Date.now() 
+        });
+        window.selectNpc(campId, newId);
+      });
+    };
+
+    window.deleteLine = async function(lineId) {
+      if (!userId) return;
+      await deleteDoc(doc(db, 'artifacts', appId, 'users', userId, 'lines', lineId));
+    };
+
+    let currentAudio = null;
+    window.playAudio = function(url) {
+      if (currentAudio) {
+        currentAudio.pause();
+        currentAudio.currentTime = 0;
+      }
+      currentAudio = new Audio(url);
+      currentAudio.play();
+    };
+
+    function pcmToWav(pcmData, sampleRate) {
+      const numChannels = 1;
+      const byteRate = sampleRate * numChannels * 2;
+      const blockAlign = numChannels * 2;
+      const buffer = new ArrayBuffer(44 + pcmData.byteLength);
+      const view = new DataView(buffer);
+      
+      const writeString = (v, offset, string) => {
+        for (let i = 0; i < string.length; i++) v.setUint8(offset + i, string.charCodeAt(i));
+      };
+
+      writeString(view, 0, 'RIFF');
+      view.setUint32(4, 36 + pcmData.byteLength, true);
+      writeString(view, 8, 'WAVE');
+      writeString(view, 12, 'fmt ');
+      view.setUint32(16, 16, true);
+      view.setUint16(20, 1, true); // PCM
+      view.setUint16(22, numChannels, true);
+      view.setUint32(24, sampleRate, true);
+      view.setUint32(28, byteRate, true);
+      view.setUint16(32, blockAlign, true);
+      view.setUint16(34, 16, true); // Bits per sample
+      writeString(view, 36, 'data');
+      view.setUint32(40, pcmData.byteLength, true);
+      
+      const pcmArray = new Int16Array(pcmData);
+      let offset = 44;
+      for (let i = 0; i < pcmArray.length; i++) {
+        view.setInt16(offset, pcmArray[i], true);
+        offset += 2;
+      }
+      return new Blob([view], { type: 'audio/wav' });
+    }
+
+    window.generateVoiceLine = async function() {
+      const text = document.getElementById('tts-input').value.trim();
+      if (!text || !userId) return;
+
+      const npc = appState.npcs.find(n => n.id === appState.activeNpcId);
+      if (!npc) return;
+
+      const activeKey = getActiveApiKey();
+      if (!activeKey) {
+        document.getElementById('api-modal').classList.remove('hidden');
+        return;
+      }
+
+      const btn = document.getElementById('generate-btn');
+      const originalHtml = btn.innerHTML;
+      btn.innerHTML = `<span class="animate-pulse">Generating...</span>`;
+      btn.disabled = true;
+
+      let promptPrefix = "Say clearly: ";
+      if (npc.style === 'cheerful') promptPrefix = "Say cheerfully and with high enthusiasm: ";
+      else if (npc.style === 'whisper') promptPrefix = "Say in a spooky, mysterious whisper: ";
+      else if (npc.style === 'dramatic') promptPrefix = "Say with dramatic cinematic narration style: ";
+      else if (npc.style === 'angry') promptPrefix = "Say in an angry, aggressive, shouting voice: ";
+      else if (npc.style === 'bored') promptPrefix = "Say in a tired, bored, monotonous voice: ";
+
+      const fullPrompt = promptPrefix + text;
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${activeKey}`;
+      
+      try {
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: fullPrompt }] }],
+            generationConfig: {
+              responseModalities: ["AUDIO"],
+              speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: npc.voice } } }
+            }
+          })
+        });
+
+        if (!response.ok) throw new Error('API Error');
+        const result = await response.json();
+        const base64Audio = result?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+        if (!base64Audio) throw new Error('No audio');
+
+        const effectiveSampleRate = Math.round(24000 * (1 / npc.rate) * npc.pitch); 
+
+        // Save to Firebase instead of local array
+        const newId = generateId();
+        const docRef = doc(db, 'artifacts', appId, 'users', userId, 'lines', newId);
+        await setDoc(docRef, {
+          id: newId,
+          npcId: npc.id,
+          text: text,
+          base64Audio: base64Audio,
+          sampleRate: effectiveSampleRate,
+          createdAt: Date.now()
+        });
+
+        document.getElementById('tts-input').value = '';
+
+      } catch (err) {
+        alert("Failed to generate voice. Please check API key.");
+      } finally {
+        btn.innerHTML = originalHtml;
+        btn.disabled = false;
+      }
+    };
+
+    window.openInputModal = function(title, callback) {
+      const modal = document.getElementById('input-modal');
+      const input = document.getElementById('input-modal-value');
+      document.getElementById('input-modal-title').innerText = title;
+      input.value = '';
+      modal.classList.remove('hidden');
+      input.focus();
+
+      document.getElementById('input-modal-submit').onclick = () => {
+        modal.classList.add('hidden');
+        callback(input.value.trim());
+      };
+    };
+
+    window.closeModal = function(id) { document.getElementById(id).classList.add('hidden'); };
+
     const apiKeyBtn = document.getElementById('api-key-btn');
     const apiKeyStatus = document.getElementById('api-key-status');
-    const apiModal = document.getElementById('api-modal');
-    const closeModalBtn = document.getElementById('close-modal-btn');
     const userApiKeyInput = document.getElementById('user-api-key');
-    const saveKeyBtn = document.getElementById('save-key-btn');
-    const clearKeyBtn = document.getElementById('clear-key-btn');
-
-    const defaultApiKey = ""; // Injected automatically in Canvas Preview
 
     function getActiveApiKey() {
       const saved = localStorage.getItem('voxsynth_gemini_api_key');
@@ -369,313 +574,21 @@
 
     apiKeyBtn.addEventListener('click', () => {
       userApiKeyInput.value = localStorage.getItem('voxsynth_gemini_api_key') || '';
-      apiModal.classList.remove('hidden');
+      document.getElementById('api-modal').classList.remove('hidden');
     });
 
-    closeModalBtn.addEventListener('click', () => {
-      apiModal.classList.add('hidden');
-    });
-
-    saveKeyBtn.addEventListener('click', () => {
+    window.saveApiKey = function() {
       const val = userApiKeyInput.value.trim();
-      if (val) {
-        localStorage.setItem('voxsynth_gemini_api_key', val);
-      }
+      if (val) localStorage.setItem('voxsynth_gemini_api_key', val);
+      else localStorage.removeItem('voxsynth_gemini_api_key');
       updateApiKeyBadge();
-      apiModal.classList.add('hidden');
-      updateStatus('API Key Saved', 'emerald');
-    });
-
-    clearKeyBtn.addEventListener('click', () => {
-      localStorage.removeItem('voxsynth_gemini_api_key');
-      userApiKeyInput.value = '';
-      updateApiKeyBadge();
-    });
-
-    updateApiKeyBadge();
-
-    function initAudio() {
-      if (!audioCtx) {
-        const AudioContext = window.AudioContext || window.webkitAudioContext;
-        audioCtx = new AudioContext();
-        analyser = audioCtx.createAnalyser();
-        analyser.fftSize = 1024;
-        analyser.connect(audioCtx.destination);
-      }
-      if (audioCtx.state === 'suspended') {
-        audioCtx.resume();
-      }
-    }
-
-    function getWordsArray() {
-      const raw = ttsInput.value.trim();
-      return raw ? raw.split(/\s+/) : ['Hello', 'world'];
-    }
-
-    function renderCaptionWords(activeIndex = -1) {
-      const words = getWordsArray();
-      wordStepIndicator.textContent = activeIndex >= 0 ? `Word ${activeIndex + 1} of ${words.length}` : `Ready (${words.length} words)`;
-
-      liveCaption.innerHTML = words.map((w, idx) => {
-        if (idx === activeIndex) {
-          return `<span class="bg-sky-400 text-slate-950 font-bold px-2 py-0.5 rounded-md shadow-sm">${escapeHtml(w)}</span>`;
-        }
-        return `<span class="text-slate-400 px-1">${escapeHtml(w)}</span>`;
-      }).join(' ');
-    }
-
-    function escapeHtml(str) {
-      return str.replace(/[&<>"']/g, (m) => ({
-        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-      }[m]));
-    }
-
-    function clearAllScheduled() {
-      scheduledTimeouts.forEach(t => clearTimeout(t));
-      scheduledTimeouts = [];
-      if (currentAudioSource) {
-        try { currentAudioSource.stop(); } catch (e) {}
-        currentAudioSource = null;
-      }
-    }
-
-    function updateStatus(text, color = 'emerald') {
-      const colorMap = {
-        emerald: 'bg-emerald-400',
-        sky: 'bg-sky-400 animate-ping',
-        amber: 'bg-amber-400',
-        rose: 'bg-rose-400'
-      };
-      statusBadge.innerHTML = `
-        <span class="w-2 h-2 rounded-full ${colorMap[color] || colorMap.emerald}"></span>
-        <span>${text}</span>
-      `;
-    }
-
-    async function synthesizeAndPlay() {
-      initAudio();
-      clearAllScheduled();
-      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
-
-      const text = ttsInput.value.trim();
-      if (!text) return;
-
-      const voiceName = voiceSelect.value;
-      const persona = styleSelect.value;
-      const rate = parseFloat(rateSlider.value);
-      const pitch = parseFloat(pitchSlider.value);
-
-      voiceReadout.textContent = `Voice: ${voiceName}`;
-      isSpeaking = true;
-      updateStatus('Generating Neural Speech...', 'sky');
-      renderCaptionWords(-1);
-
-      let promptPrefix = "Say clearly: ";
-      if (persona === 'cheerful') promptPrefix = "Say cheerfully and with high enthusiasm: ";
-      else if (persona === 'whisper') promptPrefix = "Say in a spooky, mysterious whisper: ";
-      else if (persona === 'dramatic') promptPrefix = "Say with dramatic cinematic narration style: ";
-      else if (persona === 'bored') promptPrefix = "Say in a tired, bored, monotonous voice: ";
-      else if (persona === 'robot') promptPrefix = "Say in a robotic, mechanical android voice: ";
-
-      const fullPrompt = promptPrefix + text;
-
-      const activeKey = getActiveApiKey();
-      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${activeKey}`;
-      const payload = {
-        contents: [{ parts: [{ text: fullPrompt }] }],
-        generationConfig: {
-          responseModalities: ["AUDIO"],
-          speechConfig: {
-            voiceConfig: {
-              prebuiltVoiceConfig: { voiceName: voiceName }
-            }
-          }
-        }
-      };
-
-      try {
-        let response = null;
-        let delay = 1000;
-        for (let attempt = 0; attempt < 3; attempt++) {
-          response = await fetch(apiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          });
-          if (response.ok) break;
-          if (response.status === 400 || response.status === 403) break;
-          await new Promise(r => setTimeout(r, delay));
-          delay *= 2;
-        }
-
-        if (!response || !response.ok) {
-          if (!activeKey) {
-            apiModal.classList.remove('hidden');
-            throw new Error('Missing API Key');
-          }
-          throw new Error('TTS API failed');
-        }
-        const result = await response.json();
-        const part = result?.candidates?.[0]?.content?.parts?.[0];
-        const base64Audio = part?.inlineData?.data;
-        if (!base64Audio) throw new Error('No audio returned');
-
-        // Decode PCM 16-bit 24kHz audio
-        const binaryStr = atob(base64Audio);
-        const bytes = new Uint8Array(binaryStr.length);
-        for (let i = 0; i < binaryStr.length; i++) {
-          bytes[i] = binaryStr.charCodeAt(i);
-        }
-        const pcm16 = new Int16Array(bytes.buffer);
-        const audioBuffer = audioCtx.createBuffer(1, pcm16.length, 24000);
-        const channelData = audioBuffer.getChannelData(0);
-        for (let i = 0; i < pcm16.length; i++) {
-          channelData[i] = pcm16[i] / 32768.0;
-        }
-
-        const source = audioCtx.createBufferSource();
-        source.buffer = audioBuffer;
-        source.playbackRate.value = rate;
-        
-        // Connect to analyser for oscilloscope
-        source.connect(analyser);
-        currentAudioSource = source;
-
-        updateStatus(`Playing (${voiceName})`, 'sky');
-        freqReadout.textContent = `24kHz • ${(rate * 100).toFixed(0)}% Speed`;
-
-        const words = getWordsArray();
-        const totalDurMs = (audioBuffer.duration / rate) * 1000;
-        const stepMs = totalDurMs / Math.max(1, words.length);
-
-        words.forEach((w, idx) => {
-          const t = setTimeout(() => {
-            renderCaptionWords(idx);
-          }, idx * stepMs);
-          scheduledTimeouts.push(t);
-        });
-
-        source.onended = () => {
-          isSpeaking = false;
-          currentAudioSource = null;
-          updateStatus('Engine Ready', 'emerald');
-          freqReadout.textContent = 'Idle • 24kHz';
-          renderCaptionWords(-1);
-        };
-
-        source.start(0);
-      } catch (err) {
-        isSpeaking = false;
-        updateStatus('Generation Failed', 'rose');
-        freqReadout.textContent = 'Error • Retry';
-      }
-    }
-
-    speakBtn.addEventListener('click', synthesizeAndPlay);
-
-    stopBtn.addEventListener('click', () => {
-      clearAllScheduled();
-      isSpeaking = false;
-      updateStatus('Stopped', 'amber');
-      freqReadout.textContent = 'Idle • 24kHz';
-      renderCaptionWords(-1);
-    });
-
-    // Quick Voice Buttons
-    document.querySelectorAll('.quick-voice-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const v = btn.dataset.voice;
-        voiceSelect.value = v;
-        synthesizeAndPlay();
-      });
-    });
-
-    // Preset Phrases
-    document.querySelectorAll('.preset-phrase').forEach(btn => {
-      btn.addEventListener('click', () => {
-        ttsInput.value = btn.dataset.text;
-        synthesizeAndPlay();
-      });
-    });
-
-    // Sample Scripts Cycler
-    const samples = [
-      "Hello human, welcome to VoxSynth Studio powered by advanced Gemini neural text to speech.",
-      "Around the world, artificial intelligence is transforming how computers speak and understand human language.",
-      "The quick brown fox jumps over the lazy dog with exceptional clarity and natural intonation.",
-      "Deep neural audio models generate broadcast-quality voices instantly in your browser."
-    ];
-    let sampleIdx = 0;
-    sampleTextBtn.addEventListener('click', () => {
-      sampleIdx = (sampleIdx + 1) % samples.length;
-      ttsInput.value = samples[sampleIdx];
-      renderCaptionWords(-1);
-    });
-
-    ttsInput.addEventListener('input', () => renderCaptionWords(-1));
-
-    rateSlider.addEventListener('input', () => rateVal.textContent = parseFloat(rateSlider.value).toFixed(1) + 'x');
-    pitchSlider.addEventListener('input', () => pitchVal.textContent = parseFloat(pitchSlider.value).toFixed(1) + 'x');
-
-    // Visualizer Oscilloscope
-    function resizeCanvas() {
-      const rect = canvas.parentElement.getBoundingClientRect();
-      canvas.width = rect.width * (window.devicePixelRatio || 1);
-      canvas.height = rect.height * (window.devicePixelRatio || 1);
-    }
-    window.addEventListener('resize', resizeCanvas);
-
-    function drawVisualizer() {
-      requestAnimationFrame(drawVisualizer);
-
-      const width = canvas.width;
-      const height = canvas.height;
-      ctx.fillStyle = '#020617';
-      ctx.fillRect(0, 0, width, height);
-
-      ctx.strokeStyle = '#0f172a';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(0, height / 2);
-      ctx.lineTo(width, height / 2);
-      ctx.stroke();
-
-      ctx.lineWidth = 2.5 * (window.devicePixelRatio || 1);
-      ctx.strokeStyle = '#38bdf8';
-      ctx.shadowColor = '#38bdf8';
-      ctx.shadowBlur = 8;
-      ctx.beginPath();
-
-      if (analyser && isSpeaking) {
-        const bufferLength = analyser.frequencyBinCount;
-        const dataArray = new Uint8Array(bufferLength);
-        analyser.getByteTimeDomainData(dataArray);
-
-        const sliceWidth = width / bufferLength;
-        let x = 0;
-        for (let i = 0; i < bufferLength; i++) {
-          const v = dataArray[i] / 128.0;
-          const y = (v * height) / 2;
-          if (i === 0) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
-          x += sliceWidth;
-        }
-      } else {
-        ctx.shadowBlur = 0;
-        ctx.strokeStyle = '#1e293b';
-        ctx.moveTo(0, height / 2);
-        ctx.lineTo(width, height / 2);
-      }
-
-      ctx.stroke();
-      ctx.shadowBlur = 0;
-    }
-
-    window.onload = function () {
-      resizeCanvas();
-      renderCaptionWords(-1);
-      drawVisualizer();
+      window.closeModal('api-modal');
     };
+
+    // Initialize
+    updateApiKeyBadge();
+    initAuth();
+
   </script>
 </body>
 </html>
