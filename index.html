@@ -1256,7 +1256,8 @@
           btn.disabled = true;
 
           try {
-            const audioBlob = new Blob(audioChunks);
+            // FIX 1: Explicitly label the MIME type so the browser doesn't decode an empty track
+            const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
             const arrayBuffer = await audioBlob.arrayBuffer();
             
             let userText = document.getElementById('tts-input').value.trim();
@@ -1273,7 +1274,8 @@
           }
         };
 
-        mediaRecorder.start();
+        // FIX 2: Add a 250ms timeslice to force clean data chunking
+        mediaRecorder.start(250);
         isRecording = true;
         
         btn.classList.remove('bg-slate-700', 'text-rose-400', 'border-slate-600');
