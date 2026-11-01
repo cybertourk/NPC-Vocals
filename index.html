@@ -673,6 +673,132 @@
       return new Blob([view], { type: 'audio/wav' });
     }
 
+    // --- NEW: MONSTER AUDIO DSP ENGINE ---
+    // Creates a distortion curve for Orcs and Goblins
+    function makeDistortionCurve(amount) {
+        const k = typeof amount === 'number' ? amount : 50;
+        const n_samples = 44100;
+        const curve = new Float32Array(n_samples);
+        const deg = Math.PI / 180;
+        for (let i = 0; i < n_samples; ++i) {
+            const x = i * 2 / n_samples - 1;
+            curve[i] = (3 + k) * x * 20 * deg / (Math.PI + k * Math.abs(x));
+        }
+        return curve;
+    }
+
+    // Applies physical audio filters to the generated voice
+    async function applyAudioFilters(pcmBuffer, sampleRate, race) {
+      const racesWithEffects = ['dragonborn', 'orc', 'goblin', 'aasimar', 'tiefling', 'vampire'];
+      if (!racesWithEffects.includes(race)) return pcmBuffer; // Human voices skip filters
+
+      const pcm16 = new Int16Array(pcmBuffer);
+      const float32 = new Float32Array(pcm16.length);
+      for (let i = 0; i < pcm16.length; i++) float32[i] = pcm16[i] / 32768.0;
+
+      // Create an offline rendering context to bake the effects directly into the audio file
+      const ctx = new OfflineAudioContext(1, float32.length, sampleRate);
+      const source = ctx.createBufferSource();
+      const buffer = ctx.createBuffer(1, float32.length, sampleRate);
+      buffer.getChannelData(0).set(float32);
+      source.buffer = buffer;
+
+      let lastNode = source;
+
+      if (race === 'dragonborn') {
+          // Reptilian Rumble: 35Hz Vibrato/Growl + Heavy Bass Boost
+          const tremolo = ctx.createGain();
+          const lfo = ctx.createOscillator();
+          lfo.type = 'sine';
+          lfo.frequency.value = 35; 
+          const lfoGain = ctx.createGain();
+          lfoGain.gain.value = 0.7; 
+          lfo.connect(lfoGain);
+          lfoGain.connect(tremolo.gain);
+          lfo.start();
+          
+          const bassBoost = ctx.createBiquadFilter();
+          bassBoost.type = 'lowshelf';
+          bassBoost.frequency.value = 200;
+          bassBoost.gain.value = 8;
+          
+          lastNode.connect(tremolo);
+          tremolo.connect(bassBoost);
+          lastNode = bassBoost;
+      }
+      else if (race === 'orc') {
+          // Guttural Snarl: Distortion + Lower mid crunch
+          const distortion = ctx.createWaveShaper();
+          distortion.curve = makeDistortionCurve(30);
+          const eq = ctx.createBiquadFilter();
+          eq.type = 'peaking';
+          eq.frequency.value = 150;
+          eq.gain.value = 10;
+          
+          lastNode.connect(distortion);
+          distortion.connect(eq);
+          lastNode = eq;
+      }
+      else if (race === 'goblin') {
+          // Raspy/Scratchy: Mild distortion + Bass removal (tinny sound)
+          const distortion = ctx.createWaveShaper();
+          distortion.curve = makeDistortionCurve(15);
+          const hp = ctx.createBiquadFilter();
+          hp.type = 'highpass';
+          hp.frequency.value = 400; 
+          
+          lastNode.connect(distortion);
+          distortion.connect(hp);
+          lastNode = hp;
+      }
+      else if (race === 'aasimar') {
+          // Divine Echo: Ethereal Multi-tap delay/reverb
+          const delay = ctx.createDelay();
+          delay.delayTime.value = 0.12;
+          const feedback = ctx.createGain();
+          feedback.gain.value = 0.5;
+          
+          lastNode.connect(ctx.destination); // dry signal
+          lastNode.connect(delay);
+          delay.connect(feedback);
+          feedback.connect(delay);
+          delay.connect(ctx.destination); // wet signal
+          lastNode = null; 
+      }
+      else if (race === 'vampire' || race === 'tiefling') {
+          // Spooky subtle chorus effect
+          const delay = ctx.createDelay();
+          delay.delayTime.value = 0.03; 
+          const lfo = ctx.createOscillator();
+          lfo.frequency.value = 2; 
+          const lfoGain = ctx.createGain();
+          lfoGain.gain.value = 0.005;
+          lfo.connect(lfoGain);
+          lfoGain.connect(delay.delayTime);
+          lfo.start();
+          
+          lastNode.connect(ctx.destination);
+          lastNode.connect(delay);
+          delay.connect(ctx.destination);
+          lastNode = null; 
+      }
+
+      if (lastNode) lastNode.connect(ctx.destination);
+      
+      source.start();
+      const renderedBuffer = await ctx.startRendering();
+      const renderedFloat32 = renderedBuffer.getChannelData(0);
+      const renderedPcm16 = new Int16Array(renderedFloat32.length);
+      
+      for(let i = 0; i < renderedFloat32.length; i++) {
+          let s = Math.max(-1, Math.min(1, renderedFloat32[i]));
+          renderedPcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+      }
+      
+      return renderedPcm16.buffer;
+    }
+    // ----------------------------------------
+
     // Helper for Exponential Backoff on API rate limits
     async function fetchWithRetry(url, options, maxRetries = 4) {
       let delay = 1000;
@@ -816,7 +942,10 @@
         const binaryStr = atob(base64Audio);
         const bytes = new Uint8Array(binaryStr.length);
         for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
-        const wavBlob = pcmToWav(bytes.buffer, effectiveSampleRate);
+        
+        // Pass the raw AI audio through our Monster DSP Filters before playing
+        const processedPcmBuffer = await applyAudioFilters(bytes.buffer, effectiveSampleRate, race);
+        const wavBlob = pcmToWav(processedPcmBuffer, effectiveSampleRate);
         
         playAudio(URL.createObjectURL(wavBlob));
       } catch (err) {
@@ -867,6 +996,23 @@
 
         const effectiveSampleRate = Math.round(24000 * (1 / npc.rate) * npc.pitch); 
 
+        // 1. Decode Google AI Audio
+        const binaryStr = atob(base64Audio);
+        const bytes = new Uint8Array(binaryStr.length);
+        for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+
+        // 2. Apply Monster DSP Filters to bake effects into the file
+        const processedPcmBuffer = await applyAudioFilters(bytes.buffer, effectiveSampleRate, npc.race);
+        
+        // 3. Re-encode back to Base64 to save to Firebase
+        const processedUint8 = new Uint8Array(processedPcmBuffer);
+        let finalBinaryStr = '';
+        const chunkSize = 8192; // Chunk to avoid browser stack overflow on long voice lines
+        for (let i = 0; i < processedUint8.length; i += chunkSize) {
+            finalBinaryStr += String.fromCharCode.apply(null, processedUint8.subarray(i, i + chunkSize));
+        }
+        const finalBase64Audio = btoa(finalBinaryStr);
+
         // Save to Firebase
         const newId = generateId();
         const docRef = doc(db, 'artifacts', appId, 'users', userId, 'lines', newId);
@@ -874,7 +1020,7 @@
           id: newId,
           npcId: npc.id,
           text: text,
-          base64Audio: base64Audio,
+          base64Audio: finalBase64Audio, // Saved the fully filtered monster voice!
           sampleRate: effectiveSampleRate,
           createdAt: Date.now()
         });
