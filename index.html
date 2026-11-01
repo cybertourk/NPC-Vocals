@@ -237,13 +237,22 @@
 
         <!-- Generator Section -->
         <div class="synth-panel rounded-2xl p-5 border border-sky-900/50 bg-sky-900/10">
-          <label class="block text-xs font-bold text-sky-400 uppercase mb-2">Generate New Voice Line</label>
+          <label class="block text-xs font-bold text-sky-400 uppercase mb-2">Generate or Upload Voice Line</label>
           <div class="flex flex-col sm:flex-row gap-3">
             <textarea id="tts-input" rows="2" class="flex-1 rounded-xl bg-slate-900/90 border border-slate-700/80 p-3 text-sm text-slate-100 focus:outline-none focus:border-sky-400 resize-none" placeholder="Type dialogue here..." oninput="updatePromptPreview()"></textarea>
-            <button id="generate-btn" onclick="generateVoiceLine()" class="sm:w-32 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold py-3 px-4 rounded-xl transition text-sm flex flex-col items-center justify-center gap-1 shadow-lg shadow-sky-500/20">
-              <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
-              <span>Generate</span>
-            </button>
+            
+            <div class="flex sm:flex-col gap-2 w-full sm:w-32">
+              <button id="generate-btn" onclick="generateVoiceLine()" class="flex-1 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold py-2 px-3 rounded-xl transition text-xs flex items-center justify-center gap-1 shadow-lg shadow-sky-500/20">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
+                Generate AI
+              </button>
+              
+              <input type="file" id="custom-audio-input" accept="audio/*" class="hidden" onchange="handleCustomAudio(event)">
+              <button id="upload-audio-btn" onclick="document.getElementById('custom-audio-input').click()" class="flex-1 bg-slate-700 hover:bg-slate-600 text-sky-400 font-bold py-2 px-3 rounded-xl border border-slate-600 transition text-xs flex items-center justify-center gap-1">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                Upload File
+              </button>
+            </div>
           </div>
           <!-- Live Prompt Preview -->
           <div class="mt-3 p-3 bg-slate-950/50 rounded-lg border border-slate-800">
@@ -540,8 +549,15 @@
       npcLines.forEach((line) => {
         const card = document.createElement('div');
         card.className = 'bg-slate-800/50 border border-slate-700 rounded-xl p-4 flex flex-col justify-between';
+        
+        // Indicate if it was a custom file upload
+        const badgeHTML = line.isCustomAudio ? `<span class="bg-indigo-500/20 text-indigo-300 text-[10px] px-2 py-0.5 rounded uppercase font-bold mb-2 self-start">Custom Audio</span>` : '';
+        
         card.innerHTML = `
-          <p class="text-sm text-slate-200 mb-4 line-clamp-3 italic">"${escapeHtml(line.text)}"</p>
+          <div class="flex flex-col mb-4">
+            ${badgeHTML}
+            <p class="text-sm text-slate-200 line-clamp-3 italic">"${escapeHtml(line.text)}"</p>
+          </div>
           <div class="flex items-center gap-2">
             <button onclick="playAudio('${line.blobUrl}')" class="flex-1 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold py-2 px-3 rounded-lg text-xs flex items-center justify-center gap-1 transition">
               <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
@@ -1111,7 +1127,8 @@
           text: text,
           base64Audio: finalBase64Audio, // Saved the fully filtered monster voice!
           sampleRate: 24000,
-          createdAt: Date.now()
+          createdAt: Date.now(),
+          isCustomAudio: false
         });
 
         document.getElementById('tts-input').value = '';
@@ -1121,6 +1138,83 @@
       } finally {
         btn.innerHTML = originalHtml;
         btn.disabled = false;
+      }
+    };
+
+    // --- NEW: Custom Audio Upload Handler ---
+    window.handleCustomAudio = async function(event) {
+      const file = event.target.files[0];
+      if (!file || !userId) return;
+
+      const npc = appState.npcs.find(n => n.id === appState.activeNpcId);
+      if (!npc) return;
+
+      const dsp = {
+          speed: parseFloat(document.getElementById('dsp-speed').value),
+          layer: parseFloat(document.getElementById('dsp-layer').value),
+          bass: parseFloat(document.getElementById('dsp-bass').value),
+          dist: parseFloat(document.getElementById('dsp-dist').value),
+          rev: parseFloat(document.getElementById('dsp-rev').value)
+      };
+
+      const btn = document.getElementById('upload-audio-btn');
+      const originalHtml = btn.innerHTML;
+      btn.innerHTML = `<span class="animate-pulse">Processing...</span>`;
+      btn.disabled = true;
+
+      try {
+        // Read file as ArrayBuffer
+        const arrayBuffer = await file.arrayBuffer();
+        
+        // Decode audio using native AudioContext
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+        
+        // Convert Float32 channel data into Int16 PCM (which applyAudioFilters expects)
+        const float32Array = audioBuffer.getChannelData(0); // Take first channel (mono)
+        const int16Array = new Int16Array(float32Array.length);
+        for (let i = 0; i < float32Array.length; i++) {
+            let s = Math.max(-1, Math.min(1, float32Array[i]));
+            int16Array[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+        }
+
+        // Apply our DSP Monster Engine!
+        const sampleRate = audioBuffer.sampleRate;
+        const processedPcmBuffer = await applyAudioFilters(int16Array.buffer, sampleRate, dsp);
+        
+        // Re-encode to Base64 to save
+        const processedUint8 = new Uint8Array(processedPcmBuffer);
+        let finalBinaryStr = '';
+        const chunkSize = 8192;
+        for (let i = 0; i < processedUint8.length; i += chunkSize) {
+            finalBinaryStr += String.fromCharCode.apply(null, processedUint8.subarray(i, i + chunkSize));
+        }
+        const finalBase64Audio = btoa(finalBinaryStr);
+
+        // Fallback text if user left the text box empty
+        let userText = document.getElementById('tts-input').value.trim();
+        if (!userText) userText = `[Uploaded File: ${file.name}]`;
+
+        // Save to Firebase
+        const newId = generateId();
+        const docRef = doc(db, 'artifacts', appId, 'users', userId, 'lines', newId);
+        await setDoc(docRef, {
+          id: newId,
+          npcId: npc.id,
+          text: userText,
+          base64Audio: finalBase64Audio,
+          sampleRate: sampleRate,
+          createdAt: Date.now(),
+          isCustomAudio: true
+        });
+
+        document.getElementById('tts-input').value = '';
+      } catch (err) {
+        alert(`Failed to process audio file:\n\n${err.message}`);
+      } finally {
+        btn.innerHTML = originalHtml;
+        btn.disabled = false;
+        event.target.value = ''; // Reset input
       }
     };
 
