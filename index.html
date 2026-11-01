@@ -105,7 +105,7 @@
                   <input type="text" id="npc-name-input" class="w-full rounded-xl bg-slate-900 border border-slate-700 p-2.5 text-sm text-slate-100 focus:outline-none focus:border-sky-400">
                 </div>
 
-                <div class="lg:col-span-2">
+                <div class="lg:col-span-3">
                   <label class="block text-xs font-medium text-slate-400 uppercase mb-1">Voice Model</label>
                   <div class="flex gap-2">
                     <select id="npc-voice-input" class="flex-1 rounded-xl bg-slate-900 border border-slate-700 p-2.5 text-sm text-slate-100 focus:outline-none focus:border-sky-400">
@@ -150,22 +150,9 @@
                   </div>
                 </div>
 
-                <div class="lg:col-span-1">
-                  <div class="flex gap-3 h-full items-end pb-1">
-                    <div class="flex-1">
-                      <div class="flex justify-between text-[10px] text-slate-400 mb-1"><span>PITCH</span><span id="npc-pitch-val">1.0</span></div>
-                      <input id="npc-pitch-input" type="range" min="0.5" max="1.5" step="0.1" value="1.0" class="w-full" oninput="document.getElementById('npc-pitch-val').innerText = parseFloat(this.value).toFixed(1)">
-                    </div>
-                    <div class="flex-1">
-                      <div class="flex justify-between text-[10px] text-slate-400 mb-1"><span>SPEED</span><span id="npc-rate-val">1.0</span></div>
-                      <input id="npc-rate-input" type="range" min="0.5" max="2.0" step="0.1" value="1.0" class="w-full" oninput="document.getElementById('npc-rate-val').innerText = parseFloat(this.value).toFixed(1)">
-                    </div>
-                  </div>
-                </div>
-
                 <div class="lg:col-span-2">
-                  <label class="block text-xs font-medium text-slate-400 uppercase mb-1">Race / Accent Overlay</label>
-                  <select id="npc-race-input" onchange="updatePromptPreview()" class="w-full rounded-xl bg-slate-900 border border-slate-700 p-2.5 text-sm text-slate-100 focus:outline-none focus:border-sky-400">
+                  <label class="block text-xs font-medium text-slate-400 uppercase mb-1">Race / Accent Overlay (Presets)</label>
+                  <select id="npc-race-input" onchange="applyPreset(); updatePromptPreview();" class="w-full rounded-xl bg-slate-900 border border-slate-700 p-2.5 text-sm text-slate-100 focus:outline-none focus:border-sky-400">
                     <optgroup label="Core Races (5.5e)">
                       <option value="human">Human (Standard Delivery)</option>
                       <option value="elf">Elf (Elegant, precise diction)</option>
@@ -206,6 +193,35 @@
                     <option value="cheerful">Cheerful / Happy</option>
                     <option value="bored">Tired / Bored</option>
                   </select>
+                </div>
+
+                <div class="lg:col-span-4 p-4 bg-slate-900/60 rounded-xl border border-slate-700/80 mt-1 shadow-inner">
+                  <label class="block text-[10px] font-extrabold text-sky-400 uppercase tracking-widest mb-3 flex items-center gap-1">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+                    Digital Audio Processing (DSP) Controls
+                  </label>
+                  <div class="grid grid-cols-2 lg:grid-cols-5 gap-4">
+                    <div>
+                      <div class="flex justify-between text-[10px] text-slate-400 mb-1"><span>SPEED</span><span id="dsp-speed-val">1.0</span></div>
+                      <input id="dsp-speed" type="range" min="0.5" max="2.0" step="0.05" value="1.0" class="w-full" oninput="document.getElementById('dsp-speed-val').innerText = parseFloat(this.value).toFixed(2)">
+                    </div>
+                    <div>
+                      <div class="flex justify-between text-[10px] text-slate-400 mb-1"><span>MONSTER LAYER</span><span id="dsp-layer-val">1.0</span></div>
+                      <input id="dsp-layer" type="range" min="0.5" max="1.0" step="0.05" value="1.0" class="w-full" title="Duplicates voice and pitches it down" oninput="document.getElementById('dsp-layer-val').innerText = parseFloat(this.value).toFixed(2)">
+                    </div>
+                    <div>
+                      <div class="flex justify-between text-[10px] text-slate-400 mb-1"><span>BASS (dB)</span><span id="dsp-bass-val">0</span></div>
+                      <input id="dsp-bass" type="range" min="-20" max="30" step="1" value="0" class="w-full" oninput="document.getElementById('dsp-bass-val').innerText = this.value">
+                    </div>
+                    <div>
+                      <div class="flex justify-between text-[10px] text-slate-400 mb-1"><span>DISTORTION</span><span id="dsp-dist-val">0</span></div>
+                      <input id="dsp-dist" type="range" min="0" max="50" step="1" value="0" class="w-full" oninput="document.getElementById('dsp-dist-val').innerText = this.value">
+                    </div>
+                    <div>
+                      <div class="flex justify-between text-[10px] text-slate-400 mb-1"><span>REVERB/ECHO</span><span id="dsp-rev-val">0.0</span></div>
+                      <input id="dsp-rev" type="range" min="0" max="1.0" step="0.05" value="0" class="w-full" oninput="document.getElementById('dsp-rev-val').innerText = parseFloat(this.value).toFixed(2)">
+                    </div>
+                  </div>
                 </div>
 
               </div>
@@ -486,10 +502,17 @@
       document.getElementById('npc-voice-input').value = npc.voice || 'Kore';
       document.getElementById('npc-style-input').value = npc.style || 'neutral';
       document.getElementById('npc-race-input').value = npc.race || 'human';
-      document.getElementById('npc-pitch-input').value = npc.pitch || 1.0;
-      document.getElementById('npc-pitch-val').innerText = parseFloat(npc.pitch || 1.0).toFixed(1);
-      document.getElementById('npc-rate-input').value = npc.rate || 1.0;
-      document.getElementById('npc-rate-val').innerText = parseFloat(npc.rate || 1.0).toFixed(1);
+      
+      document.getElementById('dsp-speed').value = npc.speed ?? npc.rate ?? 1.0;
+      document.getElementById('dsp-speed-val').innerText = parseFloat(npc.speed ?? npc.rate ?? 1.0).toFixed(2);
+      document.getElementById('dsp-layer').value = npc.layer ?? 1.0;
+      document.getElementById('dsp-layer-val').innerText = parseFloat(npc.layer ?? 1.0).toFixed(2);
+      document.getElementById('dsp-bass').value = npc.bass ?? 0;
+      document.getElementById('dsp-bass-val').innerText = npc.bass ?? 0;
+      document.getElementById('dsp-dist').value = npc.dist ?? 0;
+      document.getElementById('dsp-dist-val').innerText = npc.dist ?? 0;
+      document.getElementById('dsp-rev').value = npc.rev ?? 0;
+      document.getElementById('dsp-rev-val').innerText = parseFloat(npc.rev ?? 0).toFixed(2);
 
       document.getElementById('npc-portrait-input').value = npc.portraitUrl || '';
       document.getElementById('npc-portrait-img').src = npc.portraitUrl || 'https://placehold.co/150x150/1e293b/38bdf8?text=?';
@@ -549,8 +572,11 @@
         voice: document.getElementById('npc-voice-input').value,
         style: document.getElementById('npc-style-input').value,
         race: document.getElementById('npc-race-input').value,
-        pitch: parseFloat(document.getElementById('npc-pitch-input').value),
-        rate: parseFloat(document.getElementById('npc-rate-input').value),
+        speed: parseFloat(document.getElementById('dsp-speed').value),
+        layer: parseFloat(document.getElementById('dsp-layer').value),
+        bass: parseFloat(document.getElementById('dsp-bass').value),
+        dist: parseFloat(document.getElementById('dsp-dist').value),
+        rev: parseFloat(document.getElementById('dsp-rev').value),
         portraitUrl: document.getElementById('npc-portrait-input').value,
         info: document.getElementById('npc-info-input').value,
         createdAt: existingNpc.createdAt 
@@ -599,7 +625,8 @@
         const docRef = doc(db, 'artifacts', appId, 'users', userId, 'npcs', newId);
         await setDoc(docRef, { 
           id: newId, folderId: folderId, name: val, 
-          voice: 'Kore', style: 'neutral', race: 'human', pitch: 1.0, rate: 1.0, 
+          voice: 'Kore', style: 'neutral', race: 'human', 
+          speed: 1.0, layer: 1.0, bass: 0, dist: 0, rev: 0, 
           portraitUrl: '', info: '',
           createdAt: Date.now() 
         });
@@ -673,6 +700,42 @@
       return new Blob([view], { type: 'audio/wav' });
     }
 
+    window.applyPreset = function() {
+        const race = document.getElementById('npc-race-input').value;
+        const presets = {
+            'human': { speed: 1.0, layer: 1.0, bass: 0, dist: 0, rev: 0 },
+            'elf': { speed: 1.0, layer: 1.0, bass: -2, dist: 0, rev: 0.1 },
+            'dwarf': { speed: 0.95, layer: 1.0, bass: 5, dist: 5, rev: 0 },
+            'orc': { speed: 0.9, layer: 0.8, bass: 10, dist: 25, rev: 0.05 },
+            'dragonborn': { speed: 0.85, layer: 0.65, bass: 20, dist: 15, rev: 0.3 },
+            'halfling': { speed: 1.05, layer: 1.0, bass: -5, dist: 0, rev: 0 },
+            'gnome': { speed: 1.15, layer: 1.0, bass: -10, dist: 0, rev: 0 },
+            'tiefling': { speed: 0.95, layer: 0.9, bass: 2, dist: 2, rev: 0.2 },
+            'goliath': { speed: 0.8, layer: 0.75, bass: 15, dist: 5, rev: 0.1 },
+            'aasimar': { speed: 0.95, layer: 0.95, bass: 5, dist: 0, rev: 0.7 },
+            'goblin': { speed: 1.2, layer: 1.0, bass: -15, dist: 20, rev: 0 },
+            'vampire': { speed: 0.9, layer: 0.9, bass: 5, dist: 0, rev: 0.4 }
+        };
+        
+        // Fallback to human if it's an ethnicity
+        const p = presets[race] || presets['human'];
+        
+        document.getElementById('dsp-speed').value = p.speed;
+        document.getElementById('dsp-speed-val').innerText = p.speed.toFixed(2);
+        
+        document.getElementById('dsp-layer').value = p.layer;
+        document.getElementById('dsp-layer-val').innerText = p.layer.toFixed(2);
+        
+        document.getElementById('dsp-bass').value = p.bass;
+        document.getElementById('dsp-bass-val').innerText = p.bass;
+        
+        document.getElementById('dsp-dist').value = p.dist;
+        document.getElementById('dsp-dist-val').innerText = p.dist;
+        
+        document.getElementById('dsp-rev').value = p.rev;
+        document.getElementById('dsp-rev-val').innerText = p.rev.toFixed(2);
+    };
+
     // --- NEW: MONSTER AUDIO DSP ENGINE ---
     // Creates a distortion curve for Orcs and Goblins
     function makeDistortionCurve(amount) {
@@ -688,104 +751,92 @@
     }
 
     // Applies physical audio filters to the generated voice
-    async function applyAudioFilters(pcmBuffer, sampleRate, race) {
-      const racesWithEffects = ['dragonborn', 'orc', 'goblin', 'aasimar', 'tiefling', 'vampire'];
-      if (!racesWithEffects.includes(race)) return pcmBuffer; // Human voices skip filters
+    async function applyAudioFilters(pcmBuffer, sampleRate, dsp) {
+      if (dsp.speed === 1.0 && dsp.layer === 1.0 && dsp.bass === 0 && dsp.dist === 0 && dsp.rev === 0) {
+          return pcmBuffer; // Skip processing if everything is neutral
+      }
 
       const pcm16 = new Int16Array(pcmBuffer);
       const float32 = new Float32Array(pcm16.length);
       for (let i = 0; i < pcm16.length; i++) float32[i] = pcm16[i] / 32768.0;
 
-      // Create an offline rendering context to bake the effects directly into the audio file
-      const ctx = new OfflineAudioContext(1, float32.length, sampleRate);
-      const source = ctx.createBufferSource();
+      // Adjust duration based on speed and add tail for reverb
+      const duration = float32.length / sampleRate;
+      const tail = dsp.rev > 0 ? 2.0 : 0;
+      const newLength = Math.max(1, Math.ceil(((duration / dsp.speed) + tail) * sampleRate));
+      
+      const ctx = new OfflineAudioContext(1, newLength, sampleRate);
+      
       const buffer = ctx.createBuffer(1, float32.length, sampleRate);
       buffer.getChannelData(0).set(float32);
+
+      // Main Source
+      const source = ctx.createBufferSource();
       source.buffer = buffer;
+      source.playbackRate.value = dsp.speed;
 
+      // Compressor to glue everything and prevent clipping (4:1 Ratio)
+      const compressor = ctx.createDynamicsCompressor();
+      compressor.threshold.value = -12;
+      compressor.knee.value = 10;
+      compressor.ratio.value = 4;
+      compressor.attack.value = 0.01;
+      compressor.release.value = 0.1;
+
+      // Bass Boost (EQ)
+      const bassEq = ctx.createBiquadFilter();
+      bassEq.type = 'lowshelf';
+      bassEq.frequency.value = 200;
+      bassEq.gain.value = dsp.bass; 
+
+      // Distortion
+      const distortionNode = ctx.createWaveShaper();
+      distortionNode.curve = makeDistortionCurve(dsp.dist);
+
+      // Reverb (Simple Echo Network)
+      const delay = ctx.createDelay();
+      delay.delayTime.value = 0.15; 
+      const delayFeedback = ctx.createGain();
+      delayFeedback.gain.value = dsp.rev > 0 ? 0.4 : 0; 
+      const delayWet = ctx.createGain();
+      delayWet.gain.value = dsp.rev; 
+
+      // Connect Chain
       let lastNode = source;
-
-      if (race === 'dragonborn') {
-          // Reptilian Rumble: 35Hz Vibrato/Growl + Heavy Bass Boost
-          const tremolo = ctx.createGain();
-          const lfo = ctx.createOscillator();
-          lfo.type = 'sine';
-          lfo.frequency.value = 35; 
-          const lfoGain = ctx.createGain();
-          lfoGain.gain.value = 0.7; 
-          lfo.connect(lfoGain);
-          lfoGain.connect(tremolo.gain);
-          lfo.start();
-          
-          const bassBoost = ctx.createBiquadFilter();
-          bassBoost.type = 'lowshelf';
-          bassBoost.frequency.value = 200;
-          bassBoost.gain.value = 8;
-          
-          lastNode.connect(tremolo);
-          tremolo.connect(bassBoost);
-          lastNode = bassBoost;
-      }
-      else if (race === 'orc') {
-          // Guttural Snarl: Distortion + Lower mid crunch
-          const distortion = ctx.createWaveShaper();
-          distortion.curve = makeDistortionCurve(30);
-          const eq = ctx.createBiquadFilter();
-          eq.type = 'peaking';
-          eq.frequency.value = 150;
-          eq.gain.value = 10;
-          
-          lastNode.connect(distortion);
-          distortion.connect(eq);
-          lastNode = eq;
-      }
-      else if (race === 'goblin') {
-          // Raspy/Scratchy: Mild distortion + Bass removal (tinny sound)
-          const distortion = ctx.createWaveShaper();
-          distortion.curve = makeDistortionCurve(15);
-          const hp = ctx.createBiquadFilter();
-          hp.type = 'highpass';
-          hp.frequency.value = 400; 
-          
-          lastNode.connect(distortion);
-          distortion.connect(hp);
-          lastNode = hp;
-      }
-      else if (race === 'aasimar') {
-          // Divine Echo: Ethereal Multi-tap delay/reverb
-          const delay = ctx.createDelay();
-          delay.delayTime.value = 0.12;
-          const feedback = ctx.createGain();
-          feedback.gain.value = 0.5;
-          
-          lastNode.connect(ctx.destination); // dry signal
-          lastNode.connect(delay);
-          delay.connect(feedback);
-          feedback.connect(delay);
-          delay.connect(ctx.destination); // wet signal
-          lastNode = null; 
-      }
-      else if (race === 'vampire' || race === 'tiefling') {
-          // Spooky subtle chorus effect
-          const delay = ctx.createDelay();
-          delay.delayTime.value = 0.03; 
-          const lfo = ctx.createOscillator();
-          lfo.frequency.value = 2; 
-          const lfoGain = ctx.createGain();
-          lfoGain.gain.value = 0.005;
-          lfo.connect(lfoGain);
-          lfoGain.connect(delay.delayTime);
-          lfo.start();
-          
-          lastNode.connect(ctx.destination);
-          lastNode.connect(delay);
-          delay.connect(ctx.destination);
-          lastNode = null; 
-      }
-
-      if (lastNode) lastNode.connect(ctx.destination);
       
+      if (dsp.dist > 0) {
+          lastNode.connect(distortionNode);
+          lastNode = distortionNode;
+      }
+      
+      lastNode.connect(bassEq);
+      bassEq.connect(compressor);
+      compressor.connect(ctx.destination); // Dry signal
+
+      if (dsp.rev > 0) {
+          compressor.connect(delay);
+          delay.connect(delayFeedback);
+          delayFeedback.connect(delay);
+          delay.connect(delayWet);
+          delayWet.connect(ctx.destination);
+      }
+
+      // Demonic / Dragon Sub-layer (Duplicates voice & pitches it lower)
+      if (dsp.layer < 1.0) {
+          const layerSource = ctx.createBufferSource();
+          layerSource.buffer = buffer;
+          layerSource.playbackRate.value = dsp.speed * dsp.layer; 
+          
+          const layerGain = ctx.createGain();
+          layerGain.gain.value = 0.7; // Blend volume
+          
+          layerSource.connect(layerGain);
+          layerGain.connect(bassEq); // Process layer through the same monster EQ
+          layerSource.start();
+      }
+
       source.start();
+      
       const renderedBuffer = await ctx.startRendering();
       const renderedFloat32 = renderedBuffer.getChannelData(0);
       const renderedPcm16 = new Int16Array(renderedFloat32.length);
@@ -899,8 +950,14 @@
       const voice = document.getElementById('npc-voice-input').value;
       const style = document.getElementById('npc-style-input').value;
       const race = document.getElementById('npc-race-input').value;
-      const pitch = parseFloat(document.getElementById('npc-pitch-input').value);
-      const rate = parseFloat(document.getElementById('npc-rate-input').value);
+      
+      const dsp = {
+          speed: parseFloat(document.getElementById('dsp-speed').value),
+          layer: parseFloat(document.getElementById('dsp-layer').value),
+          bass: parseFloat(document.getElementById('dsp-bass').value),
+          dist: parseFloat(document.getElementById('dsp-dist').value),
+          rev: parseFloat(document.getElementById('dsp-rev').value)
+      };
 
       const activeKey = getActiveApiKey();
       if (!activeKey) {
@@ -938,14 +995,13 @@
         const base64Audio = result?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
         if (!base64Audio) throw new Error('No audio returned from Google.');
 
-        const effectiveSampleRate = Math.round(24000 * (1 / rate) * pitch); 
         const binaryStr = atob(base64Audio);
         const bytes = new Uint8Array(binaryStr.length);
         for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
         
-        // Pass the raw AI audio through our Monster DSP Filters before playing
-        const processedPcmBuffer = await applyAudioFilters(bytes.buffer, effectiveSampleRate, race);
-        const wavBlob = pcmToWav(processedPcmBuffer, effectiveSampleRate);
+        // Pass the raw AI audio through our Monster DSP Filters (Gemini TTS natively returns 24000Hz)
+        const processedPcmBuffer = await applyAudioFilters(bytes.buffer, 24000, dsp);
+        const wavBlob = pcmToWav(processedPcmBuffer, 24000);
         
         playAudio(URL.createObjectURL(wavBlob));
       } catch (err) {
@@ -962,6 +1018,14 @@
 
       const npc = appState.npcs.find(n => n.id === appState.activeNpcId);
       if (!npc) return;
+
+      const dsp = {
+          speed: parseFloat(document.getElementById('dsp-speed').value),
+          layer: parseFloat(document.getElementById('dsp-layer').value),
+          bass: parseFloat(document.getElementById('dsp-bass').value),
+          dist: parseFloat(document.getElementById('dsp-dist').value),
+          rev: parseFloat(document.getElementById('dsp-rev').value)
+      };
 
       const activeKey = getActiveApiKey();
       if (!activeKey) {
@@ -994,15 +1058,13 @@
         const base64Audio = result?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
         if (!base64Audio) throw new Error('No audio returned from Google.');
 
-        const effectiveSampleRate = Math.round(24000 * (1 / npc.rate) * npc.pitch); 
-
         // 1. Decode Google AI Audio
         const binaryStr = atob(base64Audio);
         const bytes = new Uint8Array(binaryStr.length);
         for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
 
         // 2. Apply Monster DSP Filters to bake effects into the file
-        const processedPcmBuffer = await applyAudioFilters(bytes.buffer, effectiveSampleRate, npc.race);
+        const processedPcmBuffer = await applyAudioFilters(bytes.buffer, 24000, dsp);
         
         // 3. Re-encode back to Base64 to save to Firebase
         const processedUint8 = new Uint8Array(processedPcmBuffer);
@@ -1021,7 +1083,7 @@
           npcId: npc.id,
           text: text,
           base64Audio: finalBase64Audio, // Saved the fully filtered monster voice!
-          sampleRate: effectiveSampleRate,
+          sampleRate: 24000,
           createdAt: Date.now()
         });
 
