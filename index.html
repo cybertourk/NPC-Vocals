@@ -241,17 +241,22 @@
           <div class="flex flex-col sm:flex-row gap-3">
             <textarea id="tts-input" rows="2" class="flex-1 rounded-xl bg-slate-900/90 border border-slate-700/80 p-3 text-sm text-slate-100 focus:outline-none focus:border-sky-400 resize-none" placeholder="Type dialogue here..." oninput="updatePromptPreview()"></textarea>
             
-            <div class="flex sm:flex-col gap-2 w-full sm:w-32">
+            <div class="flex sm:flex-col gap-2 w-full sm:w-36">
               <button id="generate-btn" onclick="generateVoiceLine()" class="flex-1 bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold py-2 px-3 rounded-xl transition text-xs flex items-center justify-center gap-1 shadow-lg shadow-sky-500/20">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
+                <svg class="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
                 Generate AI
               </button>
               
-              <input type="file" id="custom-audio-input" accept="audio/*" class="hidden" onchange="handleCustomAudio(event)">
-              <button id="upload-audio-btn" onclick="document.getElementById('custom-audio-input').click()" class="flex-1 bg-slate-700 hover:bg-slate-600 text-sky-400 font-bold py-2 px-3 rounded-xl border border-slate-600 transition text-xs flex items-center justify-center gap-1">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
-                Upload File
-              </button>
+              <div class="flex gap-2">
+                <input type="file" id="custom-audio-input" accept="audio/*" class="hidden" onchange="handleCustomAudio(event)">
+                <button id="upload-audio-btn" onclick="document.getElementById('custom-audio-input').click()" class="flex-1 bg-slate-700 hover:bg-slate-600 text-sky-400 font-bold py-2 px-3 rounded-xl border border-slate-600 transition text-xs flex items-center justify-center gap-1" title="Upload Audio File">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                </button>
+                <button id="record-btn" onclick="toggleRecording()" class="flex-1 bg-slate-700 hover:bg-rose-600 text-rose-400 hover:text-white font-bold py-2 px-3 rounded-xl border border-slate-600 hover:border-rose-500 transition text-xs flex items-center justify-center gap-1" title="Record Microphone">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path></svg>
+                  <span id="record-text">Record</span>
+                </button>
+              </div>
             </div>
           </div>
           <!-- Live Prompt Preview -->
@@ -1141,11 +1146,9 @@
       }
     };
 
-    // --- NEW: Custom Audio Upload Handler ---
-    window.handleCustomAudio = async function(event) {
-      const file = event.target.files[0];
-      if (!file || !userId) return;
-
+    // --- REFACTORED: Process Any ArrayBuffer through DSP ---
+    async function processCustomArrayBuffer(arrayBuffer, textLabel) {
+      if (!userId) return;
       const npc = appState.npcs.find(n => n.id === appState.activeNpcId);
       if (!npc) return;
 
@@ -1157,64 +1160,128 @@
           rev: parseFloat(document.getElementById('dsp-rev').value)
       };
 
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+      
+      const float32Array = audioBuffer.getChannelData(0); 
+      const int16Array = new Int16Array(float32Array.length);
+      for (let i = 0; i < float32Array.length; i++) {
+          let s = Math.max(-1, Math.min(1, float32Array[i]));
+          int16Array[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+      }
+
+      const sampleRate = audioBuffer.sampleRate;
+      const processedPcmBuffer = await applyAudioFilters(int16Array.buffer, sampleRate, dsp);
+      
+      const processedUint8 = new Uint8Array(processedPcmBuffer);
+      let finalBinaryStr = '';
+      const chunkSize = 8192;
+      for (let i = 0; i < processedUint8.length; i += chunkSize) {
+          finalBinaryStr += String.fromCharCode.apply(null, processedUint8.subarray(i, i + chunkSize));
+      }
+      const finalBase64Audio = btoa(finalBinaryStr);
+
+      const newId = generateId();
+      const docRef = doc(db, 'artifacts', appId, 'users', userId, 'lines', newId);
+      await setDoc(docRef, {
+        id: newId,
+        npcId: npc.id,
+        text: textLabel,
+        base64Audio: finalBase64Audio,
+        sampleRate: sampleRate,
+        createdAt: Date.now(),
+        isCustomAudio: true
+      });
+    }
+
+    // --- NEW: Custom Audio Upload Handler ---
+    window.handleCustomAudio = async function(event) {
+      const file = event.target.files[0];
+      if (!file || !userId) return;
+
       const btn = document.getElementById('upload-audio-btn');
       const originalHtml = btn.innerHTML;
-      btn.innerHTML = `<span class="animate-pulse">Processing...</span>`;
+      btn.innerHTML = `<span class="animate-pulse">...</span>`;
       btn.disabled = true;
 
       try {
-        // Read file as ArrayBuffer
         const arrayBuffer = await file.arrayBuffer();
         
-        // Decode audio using native AudioContext
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-        
-        // Convert Float32 channel data into Int16 PCM (which applyAudioFilters expects)
-        const float32Array = audioBuffer.getChannelData(0); // Take first channel (mono)
-        const int16Array = new Int16Array(float32Array.length);
-        for (let i = 0; i < float32Array.length; i++) {
-            let s = Math.max(-1, Math.min(1, float32Array[i]));
-            int16Array[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
-        }
-
-        // Apply our DSP Monster Engine!
-        const sampleRate = audioBuffer.sampleRate;
-        const processedPcmBuffer = await applyAudioFilters(int16Array.buffer, sampleRate, dsp);
-        
-        // Re-encode to Base64 to save
-        const processedUint8 = new Uint8Array(processedPcmBuffer);
-        let finalBinaryStr = '';
-        const chunkSize = 8192;
-        for (let i = 0; i < processedUint8.length; i += chunkSize) {
-            finalBinaryStr += String.fromCharCode.apply(null, processedUint8.subarray(i, i + chunkSize));
-        }
-        const finalBase64Audio = btoa(finalBinaryStr);
-
-        // Fallback text if user left the text box empty
         let userText = document.getElementById('tts-input').value.trim();
         if (!userText) userText = `[Uploaded File: ${file.name}]`;
 
-        // Save to Firebase
-        const newId = generateId();
-        const docRef = doc(db, 'artifacts', appId, 'users', userId, 'lines', newId);
-        await setDoc(docRef, {
-          id: newId,
-          npcId: npc.id,
-          text: userText,
-          base64Audio: finalBase64Audio,
-          sampleRate: sampleRate,
-          createdAt: Date.now(),
-          isCustomAudio: true
-        });
-
+        await processCustomArrayBuffer(arrayBuffer, userText);
         document.getElementById('tts-input').value = '';
       } catch (err) {
         alert(`Failed to process audio file:\n\n${err.message}`);
       } finally {
         btn.innerHTML = originalHtml;
         btn.disabled = false;
-        event.target.value = ''; // Reset input
+        event.target.value = ''; 
+      }
+    };
+
+    // --- NEW: Microphone Recording Handler ---
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let isRecording = false;
+
+    window.toggleRecording = async function() {
+      const btn = document.getElementById('record-btn');
+      const textSpan = document.getElementById('record-text');
+
+      // Stop Recording
+      if (isRecording) {
+        mediaRecorder.stop();
+        isRecording = false;
+        btn.classList.remove('bg-rose-600', 'text-white', 'border-rose-500', 'animate-pulse');
+        btn.classList.add('bg-slate-700', 'text-rose-400', 'border-slate-600');
+        textSpan.innerText = 'Record';
+        return;
+      }
+
+      // Start Recording
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+
+        mediaRecorder.ondataavailable = e => {
+          if (e.data.size > 0) audioChunks.push(e.data);
+        };
+
+        mediaRecorder.onstop = async () => {
+          const originalHtml = btn.innerHTML;
+          btn.innerHTML = `<span class="animate-pulse text-[10px]">Processing...</span>`;
+          btn.disabled = true;
+
+          try {
+            const audioBlob = new Blob(audioChunks);
+            const arrayBuffer = await audioBlob.arrayBuffer();
+            
+            let userText = document.getElementById('tts-input').value.trim();
+            if (!userText) userText = `[Microphone Recording]`;
+            
+            await processCustomArrayBuffer(arrayBuffer, userText);
+            document.getElementById('tts-input').value = '';
+          } catch (err) {
+            alert(`Failed to process recording:\n\n${err.message}`);
+          } finally {
+            btn.innerHTML = originalHtml;
+            btn.disabled = false;
+            stream.getTracks().forEach(track => track.stop()); // Release the mic
+          }
+        };
+
+        mediaRecorder.start();
+        isRecording = true;
+        
+        btn.classList.remove('bg-slate-700', 'text-rose-400', 'border-slate-600');
+        btn.classList.add('bg-rose-600', 'text-white', 'border-rose-500', 'animate-pulse');
+        textSpan.innerText = 'Stop';
+
+      } catch (err) {
+        alert("Microphone access denied or error: " + err.message);
       }
     };
 
