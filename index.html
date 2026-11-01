@@ -750,6 +750,27 @@
         return curve;
     }
 
+    // Granular Pitch Shifter: Lowers pitch without stretching time!
+    function createPitchShiftedLayer(inputFloat, sampleRate, pitchRatio) {
+        if (pitchRatio >= 1.0) return inputFloat;
+        
+        const grainSize = Math.floor(sampleRate * 0.05); // 50ms microscopic chunks
+        const stride = Math.floor(grainSize / 2);        // 50% overlap to blend smoothly
+        const outputFloat = new Float32Array(inputFloat.length);
+        
+        for (let i = 0; i + grainSize < inputFloat.length; i += stride) {
+            for (let j = 0; j < grainSize; j++) {
+                const readIndex = i + Math.floor(j * pitchRatio);
+                if (readIndex < inputFloat.length) {
+                    // Hann Window removes clicks and creates a smooth crossfade
+                    const window = 0.5 * (1 - Math.cos((2 * Math.PI * j) / grainSize));
+                    outputFloat[i + j] += inputFloat[readIndex] * window;
+                }
+            }
+        }
+        return outputFloat;
+    }
+
     // Applies physical audio filters to the generated voice
     async function applyAudioFilters(pcmBuffer, sampleRate, dsp) {
       if (dsp.speed === 1.0 && dsp.layer === 1.0 && dsp.bass === 0 && dsp.dist === 0 && dsp.rev === 0) {
@@ -821,11 +842,17 @@
           delayWet.connect(ctx.destination);
       }
 
-      // Demonic / Dragon Sub-layer (Duplicates voice & pitches it lower)
+      // Demonic / Dragon Sub-layer (Proper Pitch Shift without Time Stretch)
       if (dsp.layer < 1.0) {
+          // Process the raw audio through the Granular Synthesizer first
+          const shiftedFloat = createPitchShiftedLayer(float32, sampleRate, dsp.layer);
+          const layerBuffer = ctx.createBuffer(1, shiftedFloat.length, sampleRate);
+          layerBuffer.getChannelData(0).set(shiftedFloat);
+
           const layerSource = ctx.createBufferSource();
-          layerSource.buffer = buffer;
-          layerSource.playbackRate.value = dsp.speed * dsp.layer; 
+          layerSource.buffer = layerBuffer;
+          // Because we already pitch-shifted it, we play it at the exact same speed as the main voice!
+          layerSource.playbackRate.value = dsp.speed; 
           
           const layerGain = ctx.createGain();
           layerGain.gain.value = 0.7; // Blend volume
