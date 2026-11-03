@@ -1342,7 +1342,7 @@
       try {
         console.log("[Mic-Diag] Requesting microphone stream...");
         micStream = await navigator.mediaDevices.getUserMedia({ 
-            audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } 
+            audio: true 
         });
         console.log("[Mic-Diag] Stream acquired.");
         
