@@ -1228,6 +1228,7 @@
     let micSource = null;
     let micPcmData = [];
     let isRecording = false;
+    let chunkCount = 0; // For diagnostics
 
     window.toggleRecording = async function() {
       const btn = document.getElementById('record-btn');
@@ -1236,6 +1237,8 @@
       // Stop Recording
       if (isRecording) {
         isRecording = false;
+        console.log(`[Mic-Diag] Stop requested. Total chunks captured: ${chunkCount}`);
+        
         btn.classList.remove('bg-rose-600', 'text-white', 'border-rose-500', 'animate-pulse');
         btn.classList.add('bg-slate-700', 'text-rose-400', 'border-slate-600');
         textSpan.innerText = 'Record';
@@ -1245,19 +1248,37 @@
         btn.disabled = true;
 
         try {
+          if (micPcmData.length === 0) {
+            throw new Error("No audio chunks were captured! The microphone feed was empty.");
+          }
+
           // Stop all streams and disconnect audio nodes
           micNode.disconnect();
           micSource.disconnect();
           micStream.getTracks().forEach(track => track.stop());
           if (micCtx.state !== 'closed') await micCtx.close();
+          console.log("[Mic-Diag] Microphone stream closed successfully.");
 
           // 1. Combine all the microscopic raw audio chunks into one track
           const totalLength = micPcmData.reduce((acc, val) => acc + val.length, 0);
+          console.log(`[Mic-Diag] Combining chunks... Total Float32 array length: ${totalLength}`);
+          
           const flatFloat32 = new Float32Array(totalLength);
           let offset = 0;
+          let maxVolume = 0;
+          
           for (let chunk of micPcmData) {
             flatFloat32.set(chunk, offset);
             offset += chunk.length;
+          }
+
+          // Check if it recorded pure silence
+          for (let i = 0; i < flatFloat32.length; i++) {
+             if (Math.abs(flatFloat32[i]) > maxVolume) maxVolume = Math.abs(flatFloat32[i]);
+          }
+          console.log(`[Mic-Diag] Peak volume detected in raw capture (0.0 to 1.0): ${maxVolume}`);
+          if (maxVolume === 0) {
+            console.warn("[Mic-Diag] WARNING: The recorded audio is completely silent (all zeroes). Check system mic levels.");
           }
 
           // 2. Convert from Float32 to Int16 format for our DSP Engine
@@ -1280,7 +1301,9 @@
 
           // 3. Process the raw uncompressed mic feed through the Monster Filters
           const sampleRate = 24000; 
+          console.log("[Mic-Diag] Sending to DSP Engine...");
           const processedPcmBuffer = await applyAudioFilters(int16Array.buffer, sampleRate, dsp);
+          console.log("[Mic-Diag] DSP Engine finished.");
           
           // 4. Base64 encode and save to Firebase Soundboard
           const processedUint8 = new Uint8Array(processedPcmBuffer);
@@ -1290,6 +1313,7 @@
               finalBinaryStr += String.fromCharCode.apply(null, processedUint8.subarray(i, i + chunkSize));
           }
           const finalBase64Audio = btoa(finalBinaryStr);
+          console.log("[Mic-Diag] Encoded to Base64. Saving to Firebase...");
 
           let userText = document.getElementById('tts-input').value.trim();
           if (!userText) userText = `[Microphone Recording]`;
@@ -1303,7 +1327,9 @@
           });
 
           document.getElementById('tts-input').value = '';
+          console.log("[Mic-Diag] Audio saved successfully!");
         } catch (err) {
+          console.error("[Mic-Diag] Error during processing:", err);
           alert(`Failed to process recording:\n\n${err.message}`);
         } finally {
           btn.innerHTML = originalHtml;
@@ -1314,38 +1340,57 @@
 
       // Start Recording Direct Raw Audio
       try {
+        console.log("[Mic-Diag] Requesting microphone stream...");
         micStream = await navigator.mediaDevices.getUserMedia({ 
             audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } 
         });
+        console.log("[Mic-Diag] Stream acquired.");
         
         micCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
+        console.log(`[Mic-Diag] AudioContext created. State: ${micCtx.state}, Sample Rate: ${micCtx.sampleRate}`);
         
         // Build an inline AudioWorklet to replace the deprecated ScriptProcessorNode
         const workletCode = `
           class MicProcessor extends AudioWorkletProcessor {
+            constructor() {
+              super();
+              this.port.postMessage({ type: 'init', msg: 'Worklet Thread Alive' });
+            }
             process(inputs) {
               const input = inputs[0];
               if (input && input.length > 0 && input[0]) {
-                this.port.postMessage(new Float32Array(input[0]));
+                this.port.postMessage({ type: 'data', buffer: new Float32Array(input[0]) });
               }
-              return true;
+              return true; // Keep alive
             }
           }
           registerProcessor('mic-processor', MicProcessor);
         `;
         const blob = new Blob([workletCode], { type: 'application/javascript' });
         const workletUrl = URL.createObjectURL(blob);
+        
+        console.log("[Mic-Diag] Adding AudioWorklet module...");
         await micCtx.audioWorklet.addModule(workletUrl);
+        console.log("[Mic-Diag] AudioWorklet module added.");
 
         micSource = micCtx.createMediaStreamSource(micStream);
         micNode = new AudioWorkletNode(micCtx, 'mic-processor');
         micPcmData = [];
+        chunkCount = 0;
         isRecording = true;
 
         micNode.port.onmessage = (e) => {
           if (!isRecording) return;
-          // Capture pure uncompressed audio data from the separate audio thread
-          micPcmData.push(e.data);
+          if (e.data.type === 'init') {
+             console.log("[Mic-Diag] Worker says:", e.data.msg);
+             return;
+          }
+          if (e.data.type === 'data') {
+             if (chunkCount === 0) console.log(`[Mic-Diag] First audio chunk received! Size: ${e.data.buffer.length}`);
+             chunkCount++;
+             if (chunkCount % 100 === 0) console.log(`[Mic-Diag] Receiving data... (${chunkCount} chunks)`);
+             micPcmData.push(e.data.buffer);
+          }
         };
 
         // Wire it up (Muted to prevent feedback echo in your speakers)
@@ -1355,11 +1400,14 @@
         micNode.connect(muteNode);
         muteNode.connect(micCtx.destination);
         
+        console.log("[Mic-Diag] Audio graph connected and recording started.");
+
         btn.classList.remove('bg-slate-700', 'text-rose-400', 'border-slate-600');
         btn.classList.add('bg-rose-600', 'text-white', 'border-rose-500', 'animate-pulse');
         textSpan.innerText = 'Stop';
 
       } catch (err) {
+        console.error("[Mic-Diag] Failed to start recording:", err);
         alert("Microphone access denied or error: " + err.message);
       }
     };
