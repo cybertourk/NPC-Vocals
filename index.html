@@ -432,6 +432,7 @@
         <div class="hidden group-hover:flex items-center gap-0.5 flex-shrink-0 bg-slate-800 rounded pl-1">
           <button onclick="promptNewFolder('${folder.id}')" class="p-1 hover:text-sky-400 transition" title="Add Subfolder"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"></path></svg></button>
           <button onclick="promptNewNPC('${folder.id}')" class="p-1 hover:text-emerald-400 transition" title="Add NPC"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg></button>
+          <button onclick="renameFolder('${folder.id}')" class="p-1 hover:text-amber-400 transition" title="Rename Folder"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>
           <button onclick="deleteFolder('${folder.id}')" class="p-1 hover:text-rose-400 transition" title="Delete Folder"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg></button>
         </div>
       `;
@@ -453,6 +454,7 @@
           npcBtn.innerHTML = `
             <svg class="w-3.5 h-3.5 opacity-70 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
             <span class="truncate flex-1">${escapeHtml(npc.name)}</span>
+            <span onclick="renameNPC(event, '${npc.id}')" class="hidden group-hover:block p-1 text-slate-500 hover:text-amber-400 flex-shrink-0" title="Rename NPC"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></span>
             <span onclick="deleteNPC(event, '${npc.id}')" class="hidden group-hover:block p-1 text-slate-500 hover:text-rose-400 flex-shrink-0" title="Delete NPC"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg></span>
           `;
           npcBtn.onclick = (e) => {
@@ -568,6 +570,9 @@
               <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
               Play
             </button>
+            <button onclick="renameLine('${line.id}')" class="bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold py-2 px-3 rounded-lg text-xs flex items-center justify-center transition" title="Rename Title/Text">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+            </button>
             <a href="${line.blobUrl}" download="${npc.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_line.wav" class="bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold py-2 px-3 rounded-lg text-xs flex items-center justify-center transition" title="Export as WAV">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4-4m0 0l-4-4m4 4V4"></path></svg>
             </a>
@@ -605,7 +610,7 @@
     };
 
     window.promptNewFolder = function(parentId = null) {
-      openInputModal(parentId ? 'New Subfolder Name' : 'New Root Folder Name', async (val) => {
+      openInputModal(parentId ? 'New Subfolder Name' : 'New Root Folder Name', '', async (val) => {
         if (!val || !userId) return;
         const newId = generateId();
         const docRef = doc(db, 'artifacts', appId, 'users', userId, 'folders', newId);
@@ -639,8 +644,17 @@
       }
     };
 
+    window.renameFolder = function(folderId) {
+      const folder = appState.folders.find(f => f.id === folderId);
+      if (!folder) return;
+      openInputModal('Rename Folder', folder.name, async (val) => {
+        if (!val || !userId || val === folder.name) return;
+        await setDoc(doc(db, 'artifacts', appId, 'users', userId, 'folders', folderId), { name: val }, { merge: true });
+      });
+    };
+
     window.promptNewNPC = function(folderId) {
-      openInputModal('New NPC Name', async (val) => {
+      openInputModal('New NPC Name', '', async (val) => {
         if (!val || !userId) return;
         const newId = generateId();
         const docRef = doc(db, 'artifacts', appId, 'users', userId, 'npcs', newId);
@@ -672,9 +686,28 @@
       }
     };
 
+    window.renameNPC = function(event, npcId) {
+      event.stopPropagation();
+      const npc = appState.npcs.find(n => n.id === npcId);
+      if (!npc) return;
+      openInputModal('Rename NPC', npc.name, async (val) => {
+        if (!val || !userId || val === npc.name) return;
+        await setDoc(doc(db, 'artifacts', appId, 'users', userId, 'npcs', npcId), { name: val }, { merge: true });
+      });
+    };
+
     window.deleteLine = async function(lineId) {
       if (!userId) return;
       await deleteDoc(doc(db, 'artifacts', appId, 'users', userId, 'lines', lineId));
+    };
+
+    window.renameLine = function(lineId) {
+      const line = appState.lines.find(l => l.id === lineId);
+      if (!line) return;
+      openInputModal('Rename Audio Label / Transcript', line.text, async (val) => {
+        if (!val || !userId || val === line.text) return;
+        await setDoc(doc(db, 'artifacts', appId, 'users', userId, 'lines', lineId), { text: val }, { merge: true });
+      });
     };
 
     let currentAudio = null;
@@ -1412,17 +1445,24 @@
       }
     };
 
-    window.openInputModal = function(title, callback) {
+    window.openInputModal = function(title, defaultValue, callback) {
       const modal = document.getElementById('input-modal');
       const input = document.getElementById('input-modal-value');
       document.getElementById('input-modal-title').innerText = title;
-      input.value = '';
+      input.value = defaultValue || '';
       modal.classList.remove('hidden');
       input.focus();
 
       document.getElementById('input-modal-submit').onclick = () => {
         modal.classList.add('hidden');
         callback(input.value.trim());
+      };
+      
+      input.onkeydown = (e) => {
+        if(e.key === 'Enter') {
+          modal.classList.add('hidden');
+          callback(input.value.trim());
+        }
       };
     };
 
