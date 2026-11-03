@@ -1224,7 +1224,7 @@
     // --- REBUILT: Raw PCM Microphone Recording Handler ---
     let micStream = null;
     let micCtx = null;
-    let micProcessor = null;
+    let micNode = null;
     let micSource = null;
     let micPcmData = [];
     let isRecording = false;
@@ -1246,7 +1246,7 @@
 
         try {
           // Stop all streams and disconnect audio nodes
-          micProcessor.disconnect();
+          micNode.disconnect();
           micSource.disconnect();
           micStream.getTracks().forEach(track => track.stop());
           if (micCtx.state !== 'closed') await micCtx.close();
@@ -1319,22 +1319,40 @@
         });
         
         micCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
+        
+        // Build an inline AudioWorklet to replace the deprecated ScriptProcessorNode
+        const workletCode = `
+          class MicProcessor extends AudioWorkletProcessor {
+            process(inputs) {
+              const input = inputs[0];
+              if (input && input.length > 0 && input[0]) {
+                this.port.postMessage(new Float32Array(input[0]));
+              }
+              return true;
+            }
+          }
+          registerProcessor('mic-processor', MicProcessor);
+        `;
+        const blob = new Blob([workletCode], { type: 'application/javascript' });
+        const workletUrl = URL.createObjectURL(blob);
+        await micCtx.audioWorklet.addModule(workletUrl);
+
         micSource = micCtx.createMediaStreamSource(micStream);
-        micProcessor = micCtx.createScriptProcessor(4096, 1, 1);
+        micNode = new AudioWorkletNode(micCtx, 'mic-processor');
         micPcmData = [];
         isRecording = true;
 
-        micProcessor.onaudioprocess = (e) => {
+        micNode.port.onmessage = (e) => {
           if (!isRecording) return;
-          // Capture pure uncompressed audio data
-          micPcmData.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+          // Capture pure uncompressed audio data from the separate audio thread
+          micPcmData.push(e.data);
         };
 
         // Wire it up (Muted to prevent feedback echo in your speakers)
-        micSource.connect(micProcessor);
+        micSource.connect(micNode);
         const muteNode = micCtx.createGain();
         muteNode.gain.value = 0; 
-        micProcessor.connect(muteNode);
+        micNode.connect(muteNode);
         muteNode.connect(micCtx.destination);
         
         btn.classList.remove('bg-slate-700', 'text-rose-400', 'border-slate-600');
