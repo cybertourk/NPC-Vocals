@@ -1221,9 +1221,12 @@
       }
     };
 
-    // --- NEW: Microphone Recording Handler ---
-    let mediaRecorder = null;
-    let audioChunks = [];
+    // --- REBUILT: Raw PCM Microphone Recording Handler ---
+    let micStream = null;
+    let micCtx = null;
+    let micProcessor = null;
+    let micSource = null;
+    let micPcmData = [];
     let isRecording = false;
 
     window.toggleRecording = async function() {
@@ -1232,51 +1235,107 @@
 
       // Stop Recording
       if (isRecording) {
-        mediaRecorder.stop();
         isRecording = false;
         btn.classList.remove('bg-rose-600', 'text-white', 'border-rose-500', 'animate-pulse');
         btn.classList.add('bg-slate-700', 'text-rose-400', 'border-slate-600');
         textSpan.innerText = 'Record';
+        
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = `<span class="animate-pulse text-[10px]">Processing...</span>`;
+        btn.disabled = true;
+
+        try {
+          // Stop all streams and disconnect audio nodes
+          micProcessor.disconnect();
+          micSource.disconnect();
+          micStream.getTracks().forEach(track => track.stop());
+          if (micCtx.state !== 'closed') await micCtx.close();
+
+          // 1. Combine all the microscopic raw audio chunks into one track
+          const totalLength = micPcmData.reduce((acc, val) => acc + val.length, 0);
+          const flatFloat32 = new Float32Array(totalLength);
+          let offset = 0;
+          for (let chunk of micPcmData) {
+            flatFloat32.set(chunk, offset);
+            offset += chunk.length;
+          }
+
+          // 2. Convert from Float32 to Int16 format for our DSP Engine
+          const int16Array = new Int16Array(flatFloat32.length);
+          for (let i = 0; i < flatFloat32.length; i++) {
+            let s = Math.max(-1, Math.min(1, flatFloat32[i]));
+            int16Array[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+          }
+
+          const npc = appState.npcs.find(n => n.id === appState.activeNpcId);
+          if (!npc) throw new Error("No NPC selected to save audio to.");
+
+          const dsp = {
+              speed: parseFloat(document.getElementById('dsp-speed').value),
+              layer: parseFloat(document.getElementById('dsp-layer').value),
+              bass: parseFloat(document.getElementById('dsp-bass').value),
+              dist: parseFloat(document.getElementById('dsp-dist').value),
+              rev: parseFloat(document.getElementById('dsp-rev').value)
+          };
+
+          // 3. Process the raw uncompressed mic feed through the Monster Filters
+          const sampleRate = 24000; 
+          const processedPcmBuffer = await applyAudioFilters(int16Array.buffer, sampleRate, dsp);
+          
+          // 4. Base64 encode and save to Firebase Soundboard
+          const processedUint8 = new Uint8Array(processedPcmBuffer);
+          let finalBinaryStr = '';
+          const chunkSize = 8192;
+          for (let i = 0; i < processedUint8.length; i += chunkSize) {
+              finalBinaryStr += String.fromCharCode.apply(null, processedUint8.subarray(i, i + chunkSize));
+          }
+          const finalBase64Audio = btoa(finalBinaryStr);
+
+          let userText = document.getElementById('tts-input').value.trim();
+          if (!userText) userText = `[Microphone Recording]`;
+
+          const newId = generateId();
+          const docRef = doc(db, 'artifacts', appId, 'users', userId, 'lines', newId);
+          await setDoc(docRef, {
+            id: newId, npcId: npc.id, text: userText,
+            base64Audio: finalBase64Audio, sampleRate: sampleRate,
+            createdAt: Date.now(), isCustomAudio: true
+          });
+
+          document.getElementById('tts-input').value = '';
+        } catch (err) {
+          alert(`Failed to process recording:\n\n${err.message}`);
+        } finally {
+          btn.innerHTML = originalHtml;
+          btn.disabled = false;
+        }
         return;
       }
 
-      // Start Recording
+      // Start Recording Direct Raw Audio
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        mediaRecorder = new MediaRecorder(stream);
-        audioChunks = [];
-
-        mediaRecorder.ondataavailable = e => {
-          if (e.data.size > 0) audioChunks.push(e.data);
-        };
-
-        mediaRecorder.onstop = async () => {
-          const originalHtml = btn.innerHTML;
-          btn.innerHTML = `<span class="animate-pulse text-[10px]">Processing...</span>`;
-          btn.disabled = true;
-
-          try {
-            // FIX 1: Explicitly label the MIME type so the browser doesn't decode an empty track
-            const audioBlob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
-            const arrayBuffer = await audioBlob.arrayBuffer();
-            
-            let userText = document.getElementById('tts-input').value.trim();
-            if (!userText) userText = `[Microphone Recording]`;
-            
-            await processCustomArrayBuffer(arrayBuffer, userText);
-            document.getElementById('tts-input').value = '';
-          } catch (err) {
-            alert(`Failed to process recording:\n\n${err.message}`);
-          } finally {
-            btn.innerHTML = originalHtml;
-            btn.disabled = false;
-            stream.getTracks().forEach(track => track.stop()); // Release the mic
-          }
-        };
-
-        // FIX 2: Add a 250ms timeslice to force clean data chunking
-        mediaRecorder.start(250);
+        micStream = await navigator.mediaDevices.getUserMedia({ 
+            audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } 
+        });
+        
+        micCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
+        micSource = micCtx.createMediaStreamSource(micStream);
+        micProcessor = micCtx.createScriptProcessor(4096, 1, 1);
+        micPcmData = [];
         isRecording = true;
+
+        micProcessor.onaudioprocess = (e) => {
+          if (!isRecording) return;
+          // Capture pure uncompressed audio data
+          micPcmData.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+        };
+
+        // Wire it up (Muted to prevent feedback echo in your speakers)
+        micSource.connect(micProcessor);
+        const muteNode = micCtx.createGain();
+        muteNode.gain.value = 0; 
+        micProcessor.connect(muteNode);
+        muteNode.connect(micCtx.destination);
         
         btn.classList.remove('bg-slate-700', 'text-rose-400', 'border-slate-600');
         btn.classList.add('bg-rose-600', 'text-white', 'border-rose-500', 'animate-pulse');
