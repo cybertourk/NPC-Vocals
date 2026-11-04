@@ -235,9 +235,9 @@
           </div>
         </div>
 
-        <!-- Generator Section -->
+        <!-- Generator Section & Audio Workbench -->
         <div class="synth-panel rounded-2xl p-5 border border-sky-900/50 bg-sky-900/10">
-          <label class="block text-xs font-bold text-sky-400 uppercase mb-2">Generate or Upload Voice Line</label>
+          <label class="block text-xs font-bold text-sky-400 uppercase mb-2">Stage Raw Voice (AI or Microphone)</label>
           <div class="flex flex-col sm:flex-row gap-3">
             <textarea id="tts-input" rows="2" class="flex-1 rounded-xl bg-slate-900/90 border border-slate-700/80 p-3 text-sm text-slate-100 focus:outline-none focus:border-sky-400 resize-none" placeholder="Type dialogue here..." oninput="updatePromptPreview()"></textarea>
             
@@ -259,10 +259,34 @@
               </div>
             </div>
           </div>
+          
           <!-- Live Prompt Preview -->
           <div class="mt-3 p-3 bg-slate-950/50 rounded-lg border border-slate-800">
             <div class="text-[10px] text-slate-500 font-mono uppercase mb-1">Final API Prompt Preview</div>
             <div id="prompt-preview-text" class="text-xs text-slate-500 italic font-serif">Type dialogue above to see the director's prompt...</div>
+          </div>
+
+          <!-- AUDIO WORKBENCH (STAGING AREA) -->
+          <div class="mt-4 p-4 bg-indigo-900/20 border border-indigo-500/30 rounded-xl shadow-inner">
+            <label class="block text-xs font-bold text-indigo-400 uppercase mb-3 flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+              Audio Workbench (Staging Area)
+            </label>
+            <div class="flex flex-col sm:flex-row items-center gap-3">
+              <div id="workbench-status" class="flex-1 text-sm text-slate-400 italic truncate w-full p-2 bg-slate-950/50 rounded-lg border border-slate-800">
+                No audio currently staged. Generate or upload to begin.
+              </div>
+              <div class="flex gap-2 w-full sm:w-auto opacity-50 pointer-events-none transition-opacity duration-300" id="workbench-controls">
+                <button onclick="previewStagedAudio()" class="bg-indigo-500 hover:bg-indigo-400 text-slate-950 font-bold py-2 px-3 rounded-lg text-xs flex items-center gap-1 transition shadow-lg shadow-indigo-500/20">
+                  <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
+                  Preview with Filters
+                </button>
+                <button onclick="saveStagedAudio()" class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2 px-3 rounded-lg text-xs flex items-center gap-1 transition shadow-lg shadow-emerald-500/20">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
+                  Save to Soundboard
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -339,7 +363,8 @@
       npcs: [],
       lines: [],
       activeNpcId: null,
-      expandedFolders: {}
+      expandedFolders: {},
+      stagedAudio: null // Added for Audio Workbench
     };
 
     const defaultApiKey = ""; 
@@ -549,7 +574,7 @@
       grid.innerHTML = '';
       
       if (npcLines.length === 0) {
-        grid.innerHTML = `<div class="col-span-full text-center p-8 text-slate-500 text-sm border border-dashed border-slate-700 rounded-xl">No voice lines generated yet. Type some dialogue and hit Generate!</div>`;
+        grid.innerHTML = `<div class="col-span-full text-center p-8 text-slate-500 text-sm border border-dashed border-slate-700 rounded-xl">No voice lines saved yet. Generate or upload audio, tweak in the workbench, and save it here!</div>`;
         return;
       }
 
@@ -570,13 +595,16 @@
               <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
               Play
             </button>
+            <button onclick="loadToWorkbench('${line.id}')" class="bg-indigo-500/20 hover:bg-indigo-500/40 text-indigo-300 font-semibold py-2 px-3 rounded-lg text-xs flex items-center justify-center transition" title="Load into Workbench to Re-Edit Filters">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path></svg>
+            </button>
             <button onclick="renameLine('${line.id}')" class="bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold py-2 px-3 rounded-lg text-xs flex items-center justify-center transition" title="Rename Title/Text">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
             </button>
             <a href="${line.blobUrl}" download="${npc.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_line.wav" class="bg-slate-700 hover:bg-slate-600 text-slate-300 font-semibold py-2 px-3 rounded-lg text-xs flex items-center justify-center transition" title="Export as WAV">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4-4m0 0l-4-4m4 4V4"></path></svg>
             </a>
-            <button onclick="deleteLine('${line.id}')" class="bg-rose-500/20 hover:bg-rose-500/40 text-rose-400 font-semibold py-2 px-3 rounded-lg text-xs transition">
+            <button onclick="deleteLine('${line.id}')" class="bg-rose-500/20 hover:bg-rose-500/40 text-rose-400 font-semibold py-2 px-3 rounded-lg text-xs transition" title="Delete">
               <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
             </button>
           </div>
@@ -1093,20 +1121,141 @@
       }
     };
 
+
+    // --- AUDIO WORKBENCH (STAGING AREA) FUNCTIONS ---
+    
+    // Updates the internal UI to show an audio file is ready to be tweaked
+    window.setStagedAudio = function(buffer, sampleRate, text, isCustom) {
+        appState.stagedAudio = { buffer, sampleRate, text, isCustom };
+        
+        const statusEl = document.getElementById('workbench-status');
+        const controlsEl = document.getElementById('workbench-controls');
+
+        statusEl.innerText = `Staged: "${text}"`;
+        statusEl.classList.remove('text-slate-400', 'italic', 'bg-slate-950/50', 'border-slate-800');
+        statusEl.classList.add('text-indigo-300', 'font-medium', 'bg-indigo-950/50', 'border-indigo-500/50');
+
+        controlsEl.classList.remove('opacity-50', 'pointer-events-none');
+    };
+
+    // Previews whatever is in the staging area through the CURRENT slider settings
+    window.previewStagedAudio = async function() {
+        if (!appState.stagedAudio) return;
+        const btn = document.querySelector('button[onclick="previewStagedAudio()"]');
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = `<span class="animate-pulse">Processing Filters...</span>`;
+        btn.disabled = true;
+
+        try {
+            const dsp = {
+                speed: parseFloat(document.getElementById('dsp-speed').value),
+                layer: parseFloat(document.getElementById('dsp-layer').value),
+                bass: parseFloat(document.getElementById('dsp-bass').value),
+                dist: parseFloat(document.getElementById('dsp-dist').value),
+                rev: parseFloat(document.getElementById('dsp-rev').value)
+            };
+
+            const processedPcmBuffer = await applyAudioFilters(
+                appState.stagedAudio.buffer,
+                appState.stagedAudio.sampleRate,
+                dsp
+            );
+
+            const wavBlob = pcmToWav(processedPcmBuffer, appState.stagedAudio.sampleRate);
+            playAudio(URL.createObjectURL(wavBlob));
+        } catch(err) {
+            alert(`Failed to preview staged audio:\n\n${err.message}`);
+        } finally {
+            btn.innerHTML = originalHtml;
+            btn.disabled = false;
+        }
+    };
+
+    // Bakes the current slider settings into the staged audio and saves to Firebase
+    window.saveStagedAudio = async function() {
+        if (!userId || !appState.stagedAudio || !appState.activeNpcId) return;
+        
+        const btn = document.querySelector('button[onclick="saveStagedAudio()"]');
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = `<span class="animate-pulse">Saving to Soundboard...</span>`;
+        btn.disabled = true;
+
+        try {
+            const dsp = {
+                speed: parseFloat(document.getElementById('dsp-speed').value),
+                layer: parseFloat(document.getElementById('dsp-layer').value),
+                bass: parseFloat(document.getElementById('dsp-bass').value),
+                dist: parseFloat(document.getElementById('dsp-dist').value),
+                rev: parseFloat(document.getElementById('dsp-rev').value)
+            };
+
+            const processedPcmBuffer = await applyAudioFilters(
+                appState.stagedAudio.buffer,
+                appState.stagedAudio.sampleRate,
+                dsp
+            );
+
+            const processedUint8 = new Uint8Array(processedPcmBuffer);
+            let finalBinaryStr = '';
+            const chunkSize = 8192;
+            for (let i = 0; i < processedUint8.length; i += chunkSize) {
+                finalBinaryStr += String.fromCharCode.apply(null, processedUint8.subarray(i, i + chunkSize));
+            }
+            const finalBase64Audio = btoa(finalBinaryStr);
+
+            const newId = generateId();
+            const docRef = doc(db, 'artifacts', appId, 'users', userId, 'lines', newId);
+            await setDoc(docRef, {
+                id: newId,
+                npcId: appState.activeNpcId,
+                text: appState.stagedAudio.text,
+                base64Audio: finalBase64Audio,
+                sampleRate: appState.stagedAudio.sampleRate,
+                createdAt: Date.now(),
+                isCustomAudio: appState.stagedAudio.isCustom
+            });
+
+            btn.innerHTML = `Saved Successfully!`;
+            btn.classList.add('bg-emerald-400');
+            setTimeout(() => {
+                btn.innerHTML = originalHtml;
+                btn.classList.remove('bg-emerald-400');
+                btn.disabled = false;
+            }, 2000);
+
+        } catch(err) {
+            alert(`Failed to save staged audio:\n\n${err.message}`);
+            btn.innerHTML = originalHtml;
+            btn.disabled = false;
+        }
+    };
+
+    // Loads an old, finalized soundboard clip back into the workbench for MORE editing
+    window.loadToWorkbench = function(lineId) {
+        const line = appState.lines.find(l => l.id === lineId);
+        if (!line) return;
+        
+        // Decode base64 back to array buffer
+        const binaryStr = atob(line.base64Audio);
+        const bytes = new Uint8Array(binaryStr.length);
+        for (let i = 0; i < binaryStr.length; i++) {
+            bytes[i] = binaryStr.charCodeAt(i);
+        }
+        
+        setStagedAudio(bytes.buffer, line.sampleRate, line.text, line.isCustomAudio);
+        
+        // Scroll the user up so they see the workbench
+        document.getElementById('workbench-status').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    };
+
+    // --- REFACTORED WORKFLOWS (Generate/Upload/Record now output to Staging instead of Firebase) ---
+
     window.generateVoiceLine = async function() {
       const text = document.getElementById('tts-input').value.trim();
       if (!text || !userId) return;
 
       const npc = appState.npcs.find(n => n.id === appState.activeNpcId);
       if (!npc) return;
-
-      const dsp = {
-          speed: parseFloat(document.getElementById('dsp-speed').value),
-          layer: parseFloat(document.getElementById('dsp-layer').value),
-          bass: parseFloat(document.getElementById('dsp-bass').value),
-          dist: parseFloat(document.getElementById('dsp-dist').value),
-          rev: parseFloat(document.getElementById('dsp-rev').value)
-      };
 
       const activeKey = getActiveApiKey();
       if (!activeKey) {
@@ -1116,7 +1265,7 @@
 
       const btn = document.getElementById('generate-btn');
       const originalHtml = btn.innerHTML;
-      btn.innerHTML = `<span class="animate-pulse">Generating...</span>`;
+      btn.innerHTML = `<span class="animate-pulse">Generating AI...</span>`;
       btn.disabled = true;
 
       const fullPrompt = buildDirectorPrompt(npc.style, npc.race, text);
@@ -1139,37 +1288,12 @@
         const base64Audio = result?.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
         if (!base64Audio) throw new Error('No audio returned from Google.');
 
-        // 1. Decode Google AI Audio
         const binaryStr = atob(base64Audio);
         const bytes = new Uint8Array(binaryStr.length);
         for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
 
-        // 2. Apply Monster DSP Filters to bake effects into the file
-        const processedPcmBuffer = await applyAudioFilters(bytes.buffer, 24000, dsp);
-        
-        // 3. Re-encode back to Base64 to save to Firebase
-        const processedUint8 = new Uint8Array(processedPcmBuffer);
-        let finalBinaryStr = '';
-        const chunkSize = 8192; // Chunk to avoid browser stack overflow on long voice lines
-        for (let i = 0; i < processedUint8.length; i += chunkSize) {
-            finalBinaryStr += String.fromCharCode.apply(null, processedUint8.subarray(i, i + chunkSize));
-        }
-        const finalBase64Audio = btoa(finalBinaryStr);
-
-        // Save to Firebase
-        const newId = generateId();
-        const docRef = doc(db, 'artifacts', appId, 'users', userId, 'lines', newId);
-        await setDoc(docRef, {
-          id: newId,
-          npcId: npc.id,
-          text: text,
-          base64Audio: finalBase64Audio, // Saved the fully filtered monster voice!
-          sampleRate: 24000,
-          createdAt: Date.now(),
-          isCustomAudio: false
-        });
-
-        document.getElementById('tts-input').value = '';
+        // STAGE IT instead of saving it!
+        setStagedAudio(bytes.buffer, 24000, text, false);
 
       } catch (err) {
         alert(`Failed to generate voice:\n\n${err.message}`);
@@ -1179,20 +1303,8 @@
       }
     };
 
-    // --- REFACTORED: Process Any ArrayBuffer through DSP ---
     async function processCustomArrayBuffer(arrayBuffer, textLabel) {
       if (!userId) return;
-      const npc = appState.npcs.find(n => n.id === appState.activeNpcId);
-      if (!npc) return;
-
-      const dsp = {
-          speed: parseFloat(document.getElementById('dsp-speed').value),
-          layer: parseFloat(document.getElementById('dsp-layer').value),
-          bass: parseFloat(document.getElementById('dsp-bass').value),
-          dist: parseFloat(document.getElementById('dsp-dist').value),
-          rev: parseFloat(document.getElementById('dsp-rev').value)
-      };
-
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
       
@@ -1203,31 +1315,10 @@
           int16Array[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
       }
 
-      const sampleRate = audioBuffer.sampleRate;
-      const processedPcmBuffer = await applyAudioFilters(int16Array.buffer, sampleRate, dsp);
-      
-      const processedUint8 = new Uint8Array(processedPcmBuffer);
-      let finalBinaryStr = '';
-      const chunkSize = 8192;
-      for (let i = 0; i < processedUint8.length; i += chunkSize) {
-          finalBinaryStr += String.fromCharCode.apply(null, processedUint8.subarray(i, i + chunkSize));
-      }
-      const finalBase64Audio = btoa(finalBinaryStr);
-
-      const newId = generateId();
-      const docRef = doc(db, 'artifacts', appId, 'users', userId, 'lines', newId);
-      await setDoc(docRef, {
-        id: newId,
-        npcId: npc.id,
-        text: textLabel,
-        base64Audio: finalBase64Audio,
-        sampleRate: sampleRate,
-        createdAt: Date.now(),
-        isCustomAudio: true
-      });
+      // STAGE IT instead of saving it!
+      setStagedAudio(int16Array.buffer, audioBuffer.sampleRate, textLabel, true);
     }
 
-    // --- NEW: Custom Audio Upload Handler ---
     window.handleCustomAudio = async function(event) {
       const file = event.target.files[0];
       if (!file || !userId) return;
@@ -1239,12 +1330,10 @@
 
       try {
         const arrayBuffer = await file.arrayBuffer();
-        
         let userText = document.getElementById('tts-input').value.trim();
         if (!userText) userText = `[Uploaded File: ${file.name}]`;
-
+        
         await processCustomArrayBuffer(arrayBuffer, userText);
-        document.getElementById('tts-input').value = '';
       } catch (err) {
         alert(`Failed to process audio file:\n\n${err.message}`);
       } finally {
@@ -1254,115 +1343,60 @@
       }
     };
 
-    // --- REBUILT: Raw PCM Microphone Recording Handler ---
+    // Raw PCM Microphone Recording Handler
     let micStream = null;
     let micCtx = null;
     let micNode = null;
     let micSource = null;
     let micPcmData = [];
     let isRecording = false;
-    let chunkCount = 0; // For diagnostics
 
     window.toggleRecording = async function() {
       const btn = document.getElementById('record-btn');
       const textSpan = document.getElementById('record-text');
 
-      // Stop Recording
+      // Stop Recording Sequence
       if (isRecording) {
         isRecording = false;
-        console.log(`[Mic-Diag] Stop requested. Total chunks captured: ${chunkCount}`);
         
         btn.classList.remove('bg-rose-600', 'text-white', 'border-rose-500', 'animate-pulse');
         btn.classList.add('bg-slate-700', 'text-rose-400', 'border-slate-600');
         textSpan.innerText = 'Record';
         
         const originalHtml = btn.innerHTML;
-        btn.innerHTML = `<span class="animate-pulse text-[10px]">Processing...</span>`;
+        btn.innerHTML = `<span class="animate-pulse text-[10px]">Staging...</span>`;
         btn.disabled = true;
 
         try {
-          if (micPcmData.length === 0) {
-            throw new Error("No audio chunks were captured! The microphone feed was empty.");
-          }
+          if (micPcmData.length === 0) throw new Error("No audio chunks were captured! The microphone feed was empty.");
 
-          // Stop all streams and disconnect audio nodes
           micNode.disconnect();
           micSource.disconnect();
           micStream.getTracks().forEach(track => track.stop());
           if (micCtx.state !== 'closed') await micCtx.close();
-          console.log("[Mic-Diag] Microphone stream closed successfully.");
 
-          // 1. Combine all the microscopic raw audio chunks into one track
           const totalLength = micPcmData.reduce((acc, val) => acc + val.length, 0);
-          console.log(`[Mic-Diag] Combining chunks... Total Float32 array length: ${totalLength}`);
-          
           const flatFloat32 = new Float32Array(totalLength);
           let offset = 0;
-          let maxVolume = 0;
-          
           for (let chunk of micPcmData) {
             flatFloat32.set(chunk, offset);
             offset += chunk.length;
           }
 
-          // Check if it recorded pure silence
-          for (let i = 0; i < flatFloat32.length; i++) {
-             if (Math.abs(flatFloat32[i]) > maxVolume) maxVolume = Math.abs(flatFloat32[i]);
-          }
-          console.log(`[Mic-Diag] Peak volume detected in raw capture (0.0 to 1.0): ${maxVolume}`);
-          if (maxVolume === 0) {
-            console.warn("[Mic-Diag] WARNING: The recorded audio is completely silent (all zeroes). Check system mic levels.");
-          }
-
-          // 2. Convert from Float32 to Int16 format for our DSP Engine
           const int16Array = new Int16Array(flatFloat32.length);
           for (let i = 0; i < flatFloat32.length; i++) {
             let s = Math.max(-1, Math.min(1, flatFloat32[i]));
             int16Array[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
           }
 
-          const npc = appState.npcs.find(n => n.id === appState.activeNpcId);
-          if (!npc) throw new Error("No NPC selected to save audio to.");
-
-          const dsp = {
-              speed: parseFloat(document.getElementById('dsp-speed').value),
-              layer: parseFloat(document.getElementById('dsp-layer').value),
-              bass: parseFloat(document.getElementById('dsp-bass').value),
-              dist: parseFloat(document.getElementById('dsp-dist').value),
-              rev: parseFloat(document.getElementById('dsp-rev').value)
-          };
-
-          // 3. Process the raw uncompressed mic feed through the Monster Filters
-          const sampleRate = 24000; 
-          console.log("[Mic-Diag] Sending to DSP Engine...");
-          const processedPcmBuffer = await applyAudioFilters(int16Array.buffer, sampleRate, dsp);
-          console.log("[Mic-Diag] DSP Engine finished.");
-          
-          // 4. Base64 encode and save to Firebase Soundboard
-          const processedUint8 = new Uint8Array(processedPcmBuffer);
-          let finalBinaryStr = '';
-          const chunkSize = 8192;
-          for (let i = 0; i < processedUint8.length; i += chunkSize) {
-              finalBinaryStr += String.fromCharCode.apply(null, processedUint8.subarray(i, i + chunkSize));
-          }
-          const finalBase64Audio = btoa(finalBinaryStr);
-          console.log("[Mic-Diag] Encoded to Base64. Saving to Firebase...");
-
           let userText = document.getElementById('tts-input').value.trim();
           if (!userText) userText = `[Microphone Recording]`;
 
-          const newId = generateId();
-          const docRef = doc(db, 'artifacts', appId, 'users', userId, 'lines', newId);
-          await setDoc(docRef, {
-            id: newId, npcId: npc.id, text: userText,
-            base64Audio: finalBase64Audio, sampleRate: sampleRate,
-            createdAt: Date.now(), isCustomAudio: true
-          });
+          // STAGE IT instead of saving it!
+          setStagedAudio(int16Array.buffer, 24000, userText, true);
 
-          document.getElementById('tts-input').value = '';
-          console.log("[Mic-Diag] Audio saved successfully!");
         } catch (err) {
-          console.error("[Mic-Diag] Error during processing:", err);
+          console.error("Error during processing:", err);
           alert(`Failed to process recording:\n\n${err.message}`);
         } finally {
           btn.innerHTML = originalHtml;
@@ -1371,30 +1405,19 @@
         return;
       }
 
-      // Start Recording Direct Raw Audio
+      // Start Recording Sequence
       try {
-        console.log("[Mic-Diag] Requesting microphone stream...");
-        micStream = await navigator.mediaDevices.getUserMedia({ 
-            audio: true 
-        });
-        console.log("[Mic-Diag] Stream acquired.");
-        
+        micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
         micCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
-        console.log(`[Mic-Diag] AudioContext created. State: ${micCtx.state}, Sample Rate: ${micCtx.sampleRate}`);
         
-        // Build an inline AudioWorklet to replace the deprecated ScriptProcessorNode
         const workletCode = `
           class MicProcessor extends AudioWorkletProcessor {
-            constructor() {
-              super();
-              this.port.postMessage({ type: 'init', msg: 'Worklet Thread Alive' });
-            }
             process(inputs) {
               const input = inputs[0];
               if (input && input.length > 0 && input[0]) {
                 this.port.postMessage({ type: 'data', buffer: new Float32Array(input[0]) });
               }
-              return true; // Keep alive
+              return true;
             }
           }
           registerProcessor('mic-processor', MicProcessor);
@@ -1402,45 +1425,30 @@
         const blob = new Blob([workletCode], { type: 'application/javascript' });
         const workletUrl = URL.createObjectURL(blob);
         
-        console.log("[Mic-Diag] Adding AudioWorklet module...");
         await micCtx.audioWorklet.addModule(workletUrl);
-        console.log("[Mic-Diag] AudioWorklet module added.");
 
         micSource = micCtx.createMediaStreamSource(micStream);
         micNode = new AudioWorkletNode(micCtx, 'mic-processor');
         micPcmData = [];
-        chunkCount = 0;
         isRecording = true;
 
         micNode.port.onmessage = (e) => {
           if (!isRecording) return;
-          if (e.data.type === 'init') {
-             console.log("[Mic-Diag] Worker says:", e.data.msg);
-             return;
-          }
-          if (e.data.type === 'data') {
-             if (chunkCount === 0) console.log(`[Mic-Diag] First audio chunk received! Size: ${e.data.buffer.length}`);
-             chunkCount++;
-             if (chunkCount % 100 === 0) console.log(`[Mic-Diag] Receiving data... (${chunkCount} chunks)`);
-             micPcmData.push(e.data.buffer);
-          }
+          if (e.data.type === 'data') micPcmData.push(e.data.buffer);
         };
 
-        // Wire it up (Muted to prevent feedback echo in your speakers)
+        // Mute feed so it doesn't echo from speakers
         micSource.connect(micNode);
         const muteNode = micCtx.createGain();
         muteNode.gain.value = 0; 
         micNode.connect(muteNode);
         muteNode.connect(micCtx.destination);
         
-        console.log("[Mic-Diag] Audio graph connected and recording started.");
-
         btn.classList.remove('bg-slate-700', 'text-rose-400', 'border-slate-600');
         btn.classList.add('bg-rose-600', 'text-white', 'border-rose-500', 'animate-pulse');
         textSpan.innerText = 'Stop';
 
       } catch (err) {
-        console.error("[Mic-Diag] Failed to start recording:", err);
         alert("Microphone access denied or error: " + err.message);
       }
     };
