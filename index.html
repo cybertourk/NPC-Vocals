@@ -50,6 +50,22 @@
         + New Root Folder
       </button>
     </div>
+
+    <!-- Playlists / Conversation Boards Sidebar Section -->
+    <div class="border-t border-slate-800 flex flex-col max-h-64 bg-slate-950/40">
+      <div class="px-3 py-2 border-b border-slate-800/80 flex items-center justify-between">
+        <span class="text-[11px] font-extrabold uppercase tracking-wider text-purple-400 flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h10m-10 4h6"></path></svg>
+          Conversations / Playlists
+        </span>
+        <button onclick="promptNewPlaylist()" class="px-2 py-0.5 bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 text-[10px] font-bold rounded border border-purple-500/30 transition" title="Create New Playlist">
+          + New
+        </button>
+      </div>
+      <div class="flex-1 overflow-y-auto p-2 space-y-1 scrollbar-hide" id="playlists-container">
+        <!-- Populated by JS -->
+      </div>
+    </div>
   </aside>
 
   <!-- Main Content Area -->
@@ -68,7 +84,12 @@
         </svg>
         <input 
           id="global-search-input" 
-          type="text" 
+          type="search" 
+          name="vox_global_search_query"
+          autocomplete="off"
+          data-lpignore="true"
+          data-1p-ignore="true"
+          data-form-type="other"
           placeholder="Global Search: Find any audio line, description, or NPC..." 
           class="w-full pl-9 pr-8 py-1.5 rounded-full bg-slate-950 border border-slate-700 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-sky-400 transition"
           oninput="handleGlobalSearch(this.value)"
@@ -133,7 +154,7 @@
             <!-- Portrait Area -->
             <div class="flex flex-col items-center gap-2 w-full md:w-32 flex-shrink-0">
               <img id="npc-portrait-img" src="https://placehold.co/150x150/1e293b/38bdf8?text=?" class="w-32 h-32 rounded-2xl object-cover border border-slate-700 bg-slate-800 shadow-inner" alt="NPC Portrait" onerror="this.src='https://placehold.co/150x150/1e293b/38bdf8?text=?'">
-              <input type="text" id="npc-portrait-input" placeholder="Image URL (Catbox, etc.)" class="w-full text-[10px] rounded-lg bg-slate-900 border border-slate-700 p-1.5 text-slate-300 focus:outline-none focus:border-sky-400" oninput="document.getElementById('npc-portrait-img').src = this.value || 'https://placehold.co/150x150/1e293b/38bdf8?text=?'">
+              <input type="url" id="npc-portrait-input" name="vox_npc_portrait_url" autocomplete="off" data-lpignore="true" data-1p-ignore="true" data-form-type="other" placeholder="Image URL (Catbox, etc.)" class="w-full text-[10px] rounded-lg bg-slate-900 border border-slate-700 p-1.5 text-slate-300 focus:outline-none focus:border-sky-400" oninput="document.getElementById('npc-portrait-img').src = this.value || 'https://placehold.co/150x150/1e293b/38bdf8?text=?'">
             </div>
 
             <!-- Settings & Notes Area -->
@@ -141,8 +162,8 @@
               <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 
                 <div class="lg:col-span-1">
-                  <label class="block text-xs font-medium text-slate-400 uppercase mb-1">NPC Name</label>
-                  <input type="text" id="npc-name-input" class="w-full rounded-xl bg-slate-900 border border-slate-700 p-2.5 text-sm text-slate-100 focus:outline-none focus:border-sky-400">
+                  <label class="block text-xs font-medium text-slate-400 uppercase mb-1">NPC Title / Label</label>
+                  <input type="text" id="npc-name-input" name="vox_character_label" autocomplete="off" data-lpignore="true" data-1p-ignore="true" data-form-type="other" spellcheck="false" class="w-full rounded-xl bg-slate-900 border border-slate-700 p-2.5 text-sm text-slate-100 focus:outline-none focus:border-sky-400">
                 </div>
 
                 <div class="lg:col-span-3">
@@ -270,7 +291,7 @@
               <!-- NPC Info Area -->
               <div>
                 <label class="block text-xs font-medium text-slate-400 uppercase mb-1">Character Information & Notes</label>
-                <textarea id="npc-info-input" rows="2" class="w-full rounded-xl bg-slate-900 border border-slate-700 p-2.5 text-sm text-slate-100 focus:outline-none focus:border-sky-400 resize-y" placeholder="Background, appearance, personality quirks..."></textarea>
+                <textarea id="npc-info-input" name="vox_character_notes" autocomplete="off" data-lpignore="true" data-1p-ignore="true" data-form-type="other" rows="2" class="w-full rounded-xl bg-slate-900 border border-slate-700 p-2.5 text-sm text-slate-100 focus:outline-none focus:border-sky-400 resize-y" placeholder="Background, appearance, personality quirks..."></textarea>
               </div>
             </div>
           </div>
@@ -281,8 +302,8 @@
           <label class="block text-xs font-bold text-sky-400 uppercase mb-2">Stage Raw Voice (AI, Upload, or Microphone)</label>
           <div class="flex flex-col sm:flex-row gap-3">
             <div class="flex-1 flex flex-col gap-2">
-              <textarea id="tts-input" rows="2" class="w-full rounded-xl bg-slate-900/90 border border-slate-700/80 p-3 text-sm text-slate-100 focus:outline-none focus:border-sky-400 resize-none" placeholder="Dialogue / Clip Name (e.g., Hello Adventurer!)" oninput="updatePromptPreview()"></textarea>
-              <input id="tts-desc-input" type="text" class="w-full rounded-xl bg-slate-900/70 border border-slate-800 px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-sky-400" placeholder="Optional Description (e.g., He says this at the start of every meeting)">
+              <textarea id="tts-input" name="vox_tts_dialogue" autocomplete="off" data-lpignore="true" data-1p-ignore="true" data-form-type="other" rows="2" class="w-full rounded-xl bg-slate-900/90 border border-slate-700/80 p-3 text-sm text-slate-100 focus:outline-none focus:border-sky-400 resize-none" placeholder="Dialogue / Clip Label (e.g., Hello Adventurer!)" oninput="updatePromptPreview()"></textarea>
+              <input id="tts-desc-input" name="vox_tts_description" type="text" autocomplete="off" data-lpignore="true" data-1p-ignore="true" data-form-type="other" class="w-full rounded-xl bg-slate-900/70 border border-slate-800 px-3 py-2 text-xs text-slate-300 focus:outline-none focus:border-sky-400" placeholder="Optional Description (e.g., He says this at the start of every meeting)">
             </div>
             
             <div class="flex sm:flex-col gap-2 w-full sm:w-36">
@@ -327,12 +348,12 @@
             <!-- Editable Name & Description for Staged Audio -->
             <div id="workbench-meta-inputs" class="hidden grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
-                <label class="block text-[10px] font-semibold text-indigo-300 uppercase mb-1">Staged Audio Name / Dialogue</label>
-                <input id="workbench-name-input" type="text" class="w-full rounded-lg bg-slate-950/80 border border-indigo-500/40 p-2 text-xs text-slate-100 focus:outline-none focus:border-indigo-400" placeholder="Audio Name...">
+                <label class="block text-[10px] font-semibold text-indigo-300 uppercase mb-1">Staged Audio Dialogue / Title</label>
+                <input id="workbench-name-input" name="vox_staged_title" type="text" autocomplete="off" data-lpignore="true" data-1p-ignore="true" data-form-type="other" class="w-full rounded-lg bg-slate-950/80 border border-indigo-500/40 p-2 text-xs text-slate-100 focus:outline-none focus:border-indigo-400" placeholder="Audio Title...">
               </div>
               <div>
                 <label class="block text-[10px] font-semibold text-indigo-300 uppercase mb-1">Optional Description</label>
-                <input id="workbench-desc-input" type="text" class="w-full rounded-lg bg-slate-950/80 border border-indigo-500/40 p-2 text-xs text-slate-300 focus:outline-none focus:border-indigo-400" placeholder="Optional context note...">
+                <input id="workbench-desc-input" name="vox_staged_desc" type="text" autocomplete="off" data-lpignore="true" data-1p-ignore="true" data-form-type="other" class="w-full rounded-lg bg-slate-950/80 border border-indigo-500/40 p-2 text-xs text-slate-300 focus:outline-none focus:border-indigo-400" placeholder="Optional context note...">
               </div>
             </div>
 
@@ -379,7 +400,12 @@
               </svg>
               <input 
                 id="npc-search-input" 
-                type="text" 
+                name="vox_npc_filter_query"
+                type="search" 
+                autocomplete="off"
+                data-lpignore="true"
+                data-1p-ignore="true"
+                data-form-type="other"
                 placeholder="Search this NPC's audio..." 
                 class="w-full pl-8 pr-7 py-1.5 rounded-xl bg-slate-900 border border-slate-700 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-sky-400"
                 oninput="renderSoundboard()"
@@ -396,6 +422,92 @@
             <!-- Voice lines populated here -->
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Active Playlist / Conversation Board Workspace -->
+    <div id="playlist-workspace" class="hidden flex-1 flex flex-col h-full overflow-hidden">
+      <div class="flex-1 overflow-y-auto p-6 space-y-6 pb-24">
+        
+        <!-- Playlist Header & Sequence Controller -->
+        <div class="synth-panel rounded-2xl p-5 border border-purple-500/30 bg-purple-950/10">
+          <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+            <div class="space-y-1 flex-1">
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider rounded bg-purple-500/20 text-purple-300 border border-purple-500/30">Conversation Board</span>
+                <h2 id="playlist-title-heading" class="text-xl font-extrabold text-white truncate">Playlist Title</h2>
+                <button onclick="renameActivePlaylist()" class="p-1 text-slate-400 hover:text-amber-400 transition" title="Rename Playlist">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                </button>
+              </div>
+              <input 
+                id="playlist-desc-input" 
+                name="vox_playlist_notes" 
+                type="text" 
+                autocomplete="off" 
+                data-lpignore="true" 
+                data-1p-ignore="true" 
+                data-form-type="other"
+                placeholder="Add scene notes or conversation context (auto-saves)..." 
+                class="w-full max-w-2xl bg-transparent border-b border-transparent hover:border-slate-700 focus:border-purple-400 text-xs text-slate-300 py-1 focus:outline-none transition"
+                onchange="saveActivePlaylistDescription(this.value)"
+              >
+            </div>
+
+            <div class="flex flex-wrap items-center gap-2">
+              <button onclick="openPlaylistLinePicker()" class="px-3 py-2 rounded-xl bg-purple-500 hover:bg-purple-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition shadow-lg shadow-purple-500/20">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                Add Dialogue to Queue
+              </button>
+              <button onclick="clearActivePlaylistQueue()" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs border border-slate-700 transition">
+                Clear Queue
+              </button>
+              <button onclick="deleteActivePlaylist()" class="px-3 py-2 rounded-xl bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 font-semibold text-xs border border-rose-500/30 transition">
+                Delete Board
+              </button>
+            </div>
+          </div>
+
+          <!-- Sequential Playback Bar -->
+          <div class="pt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div class="flex flex-wrap items-center gap-2">
+              <button id="playlist-play-seq-btn" onclick="startPlaylistSequence(0)" class="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs flex items-center gap-2 transition shadow-lg shadow-emerald-500/20">
+                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
+                Play All in Sequence
+              </button>
+
+              <button id="playlist-step-btn" onclick="playNextStepInPlaylist()" class="px-4 py-2.5 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-extrabold text-xs flex items-center gap-1.5 transition shadow-lg shadow-sky-500/20" title="Plays the highlighted line and advances the pointer to the next line without auto-playing the rest">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 5l7 7-7 7M5 5l7 7-7 7"></path></svg>
+                <span id="playlist-step-btn-text">Play Next Cue (#1)</span>
+              </button>
+
+              <button onclick="resetPlaylistPointer()" class="px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs border border-slate-700 transition" title="Reset Step Pointer to #1">
+                Reset to #1
+              </button>
+
+              <button onclick="stopCurrentAudio()" class="px-3 py-2.5 rounded-xl bg-rose-500/20 hover:bg-rose-500/40 text-rose-300 font-semibold text-xs border border-rose-500/30 transition">
+                Stop
+              </button>
+            </div>
+
+            <div class="flex items-center gap-3 bg-slate-900/90 px-3 py-2 rounded-xl border border-slate-800">
+              <label class="text-[11px] font-semibold text-slate-400 uppercase">Gap Between Lines:</label>
+              <select id="playlist-gap-select" class="bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-xs text-sky-400 font-mono focus:outline-none">
+                <option value="0">0.0s (Instant)</option>
+                <option value="400">0.4s (Natural)</option>
+                <option value="800" selected>0.8s (Dramatic)</option>
+                <option value="1500">1.5s (Slow Pause)</option>
+                <option value="2500">2.5s (Long Pause)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Ordered Queue List -->
+        <div class="space-y-3" id="playlist-items-container">
+          <!-- Populated by JS -->
+        </div>
+
       </div>
     </div>
 
@@ -445,7 +557,7 @@
         <button onclick="closeModal('api-modal')" class="text-slate-400 hover:text-white">✕</button>
       </div>
       <p class="text-xs text-slate-300">Required to generate voices. Saved locally in your browser.</p>
-      <input id="user-api-key" type="password" placeholder="AIzaSy..." class="w-full rounded-xl bg-slate-900 border border-slate-700 p-2.5 text-sm text-slate-100 font-mono focus:outline-none focus:border-sky-400">
+      <input id="user-api-key" name="vox_gemini_secret_token" type="password" autocomplete="new-password" data-lpignore="true" data-1p-ignore="true" data-form-type="other" placeholder="AIzaSy..." class="w-full rounded-xl bg-slate-900 border border-slate-700 p-2.5 text-sm text-slate-100 font-mono focus:outline-none focus:border-sky-400">
       <div class="flex justify-between items-center pt-2">
         <a href="https://aistudio.google.com/app/apikey" target="_blank" class="text-xs text-sky-400 hover:underline">Get a free key →</a>
         <button onclick="saveApiKey()" class="px-4 py-2 rounded-xl text-xs font-bold bg-sky-400 hover:bg-sky-300 text-slate-950">Save Key</button>
@@ -457,7 +569,7 @@
   <div id="input-modal" class="hidden fixed inset-0 z-50 modal-overlay flex items-center justify-center p-4">
     <div class="synth-panel rounded-2xl max-w-sm w-full p-6 space-y-4">
       <h3 id="input-modal-title" class="text-lg font-bold text-white">Enter Value</h3>
-      <input id="input-modal-value" type="text" class="w-full rounded-xl bg-slate-900 border border-slate-700 p-2.5 text-sm text-slate-100 focus:outline-none focus:border-sky-400">
+      <input id="input-modal-value" name="vox_modal_generic_entry" type="text" autocomplete="off" data-lpignore="true" data-1p-ignore="true" data-form-type="other" spellcheck="false" class="w-full rounded-xl bg-slate-900 border border-slate-700 p-2.5 text-sm text-slate-100 focus:outline-none focus:border-sky-400">
       <div class="flex justify-end gap-2 pt-2">
         <button onclick="closeModal('input-modal')" class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300">Cancel</button>
         <button id="input-modal-submit" class="px-4 py-2 rounded-xl text-xs font-bold bg-sky-400 hover:bg-sky-300 text-slate-950">Confirm</button>
@@ -470,16 +582,72 @@
     <div class="synth-panel rounded-2xl max-w-md w-full p-6 space-y-4">
       <h3 class="text-lg font-bold text-white">Edit Audio Details</h3>
       <div>
-        <label class="block text-xs font-medium text-slate-400 uppercase mb-1">Name / Dialogue</label>
-        <input id="line-edit-name" type="text" class="w-full rounded-xl bg-slate-900 border border-slate-700 p-2.5 text-sm text-slate-100 focus:outline-none focus:border-sky-400" placeholder="e.g., Hello Adventurer!">
+        <label class="block text-xs font-medium text-slate-400 uppercase mb-1">Dialogue / Clip Label</label>
+        <input id="line-edit-name" name="vox_clip_edit_title" type="text" autocomplete="off" data-lpignore="true" data-1p-ignore="true" data-form-type="other" class="w-full rounded-xl bg-slate-900 border border-slate-700 p-2.5 text-sm text-slate-100 focus:outline-none focus:border-sky-400" placeholder="e.g., Hello Adventurer!">
       </div>
       <div>
         <label class="block text-xs font-medium text-slate-400 uppercase mb-1">Description (Optional)</label>
-        <textarea id="line-edit-desc" rows="3" class="w-full rounded-xl bg-slate-900 border border-slate-700 p-2.5 text-sm text-slate-100 focus:outline-none focus:border-sky-400 resize-none" placeholder="e.g., He says this at the start of every meeting."></textarea>
+        <textarea id="line-edit-desc" name="vox_clip_edit_desc" rows="3" autocomplete="off" data-lpignore="true" data-1p-ignore="true" data-form-type="other" class="w-full rounded-xl bg-slate-900 border border-slate-700 p-2.5 text-sm text-slate-100 focus:outline-none focus:border-sky-400 resize-none" placeholder="e.g., He says this at the start of every meeting."></textarea>
       </div>
       <div class="flex justify-end gap-2 pt-2">
         <button onclick="closeModal('line-edit-modal')" class="px-4 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-300">Cancel</button>
         <button id="line-edit-submit" class="px-4 py-2 rounded-xl text-xs font-bold bg-sky-400 hover:bg-sky-300 text-slate-950">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Audio Card to Playlist Modal -->
+  <div id="add-to-playlist-modal" class="hidden fixed inset-0 z-50 modal-overlay flex items-center justify-center p-4">
+    <div class="synth-panel rounded-2xl max-w-md w-full p-6 space-y-4">
+      <div class="flex justify-between items-center">
+        <h3 class="text-lg font-bold text-white flex items-center gap-2">
+          <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h10m-10 4h6"></path></svg>
+          Add Dialogue to Playlist
+        </h3>
+        <button onclick="closeModal('add-to-playlist-modal')" class="text-slate-400 hover:text-white">✕</button>
+      </div>
+      <p id="add-to-playlist-line-preview" class="text-xs text-slate-300 italic bg-slate-900/90 p-2.5 rounded-lg border border-slate-800 truncate"></p>
+      
+      <div>
+        <label class="block text-xs font-medium text-slate-400 uppercase mb-1.5">Choose Existing Playlist</label>
+        <div id="add-to-playlist-list" class="max-h-48 overflow-y-auto space-y-1.5 pr-1">
+          <!-- Populated by JS -->
+        </div>
+      </div>
+
+      <div class="pt-2 border-t border-slate-800 flex items-center gap-2">
+        <input id="quick-new-playlist-input" name="vox_quick_new_playlist" type="text" autocomplete="off" data-lpignore="true" data-1p-ignore="true" data-form-type="other" placeholder="Or create new playlist title..." class="flex-1 rounded-xl bg-slate-900 border border-slate-700 p-2 text-xs text-slate-100 focus:outline-none focus:border-purple-400">
+        <button onclick="createAndAddLineToPlaylist()" class="px-3 py-2 rounded-xl text-xs font-bold bg-purple-500 hover:bg-purple-400 text-slate-950 whitespace-nowrap">
+          + Create & Add
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Browse & Add Any NPC Dialogue to Active Playlist Modal -->
+  <div id="playlist-picker-modal" class="hidden fixed inset-0 z-50 modal-overlay flex items-center justify-center p-4">
+    <div class="synth-panel rounded-2xl max-w-2xl w-full p-6 space-y-4 flex flex-col max-h-[85vh]">
+      <div class="flex justify-between items-center">
+        <h3 class="text-lg font-bold text-white flex items-center gap-2">
+          <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+          Queue Dialogues from Any NPC
+        </h3>
+        <button onclick="closeModal('playlist-picker-modal')" class="text-slate-400 hover:text-white">✕</button>
+      </div>
+
+      <div class="flex flex-col sm:flex-row gap-2">
+        <select id="picker-npc-filter" onchange="renderPlaylistPickerList()" class="sm:w-56 rounded-xl bg-slate-900 border border-slate-700 p-2 text-xs text-slate-100 focus:outline-none focus:border-purple-400">
+          <option value="all">All NPCs in Library</option>
+        </select>
+        <input id="picker-search-input" name="vox_picker_search" type="search" autocomplete="off" data-lpignore="true" data-1p-ignore="true" data-form-type="other" placeholder="Filter by dialogue text or description..." class="flex-1 rounded-xl bg-slate-900 border border-slate-700 p-2 text-xs text-slate-100 focus:outline-none focus:border-purple-400" oninput="renderPlaylistPickerList()">
+      </div>
+
+      <div id="playlist-picker-results" class="flex-1 overflow-y-auto space-y-2 pr-1 min-h-[240px]">
+        <!-- Populated by JS -->
+      </div>
+
+      <div class="flex justify-end pt-2 border-t border-slate-800">
+        <button onclick="closeModal('playlist-picker-modal')" class="px-4 py-2 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200">Done</button>
       </div>
     </div>
   </div>
@@ -524,11 +692,18 @@
       folders: [],
       npcs: [],
       lines: [],
+      playlists: [],
       activeNpcId: null,
+      activePlaylistId: null,
+      playlistStepIndex: 0,
+      isSequencePlaying: false,
       expandedFolders: {},
       stagedAudio: null,
       globalSearchQuery: ''
     };
+
+    let sequenceTimeoutId = null;
+    let pendingLineIdForPlaylist = null;
 
     const defaultApiKey = ""; 
     function generateId() { return crypto.randomUUID(); }
@@ -615,10 +790,45 @@
         }).sort((a,b) => a.createdAt - b.createdAt);
         renderSoundboard();
         if (appState.globalSearchQuery) renderGlobalSearchResults();
+        if (appState.activePlaylistId) renderPlaylistWorkspace();
+      }, (err) => console.error(err));
+
+      const playlistsRef = collection(db, 'artifacts', appId, 'users', userId, 'playlists');
+      onSnapshot(playlistsRef, (snap) => {
+        appState.playlists = snap.docs.map(d => d.data()).sort((a,b) => a.createdAt - b.createdAt);
+        renderPlaylistsSidebar();
+        if (appState.activePlaylistId) renderPlaylistWorkspace();
       }, (err) => console.error(err));
     }
 
     // --- UI RENDER FUNCTIONS ---
+    function renderPlaylistsSidebar() {
+      const container = document.getElementById('playlists-container');
+      if (!container) return;
+      container.innerHTML = '';
+
+      if (appState.playlists.length === 0) {
+        container.innerHTML = `<div class="text-[11px] text-slate-600 italic px-2 py-2">No playlists yet. Click "+ New" to build a conversation board.</div>`;
+        return;
+      }
+
+      appState.playlists.forEach(pl => {
+        const isActive = appState.activePlaylistId === pl.id;
+        const count = Array.isArray(pl.items) ? pl.items.length : 0;
+        const btn = document.createElement('button');
+        btn.className = `w-full text-left px-2.5 py-1.5 rounded-lg text-xs transition flex items-center justify-between gap-2 group ${isActive ? 'bg-purple-500/20 text-purple-300 font-semibold border border-purple-500/30' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-200'}`;
+        btn.innerHTML = `
+          <div class="flex items-center gap-2 min-w-0 flex-1">
+            <svg class="w-3.5 h-3.5 text-purple-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path></svg>
+            <span class="truncate">${escapeHtml(pl.name)}</span>
+          </div>
+          <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-slate-900 text-slate-400">${count}</span>
+        `;
+        btn.onclick = () => selectPlaylist(pl.id);
+        container.appendChild(btn);
+      });
+    }
+
     function renderSidebar() {
       const container = document.getElementById('folders-container');
       if (!container) return;
@@ -628,6 +838,7 @@
       roots.forEach(r => {
         container.appendChild(createFolderElement(r, 0));
       });
+      renderPlaylistsSidebar();
     }
 
     function createFolderElement(folder, depth) {
@@ -701,6 +912,9 @@
 
     window.selectNpc = function(npcId) {
       appState.activeNpcId = npcId;
+      appState.activePlaylistId = null;
+      appState.isSequencePlaying = false;
+      if (sequenceTimeoutId) clearTimeout(sequenceTimeoutId);
       // Expand parent folders automatically so user sees where the NPC lives
       const npc = appState.npcs.find(n => n.id === npcId);
       if (npc) {
@@ -710,6 +924,20 @@
           currFolder = appState.folders.find(f => f.id === currFolder.parentId);
         }
       }
+      if (appState.globalSearchQuery) {
+        clearGlobalSearch();
+      } else {
+        renderSidebar();
+        renderWorkspace();
+      }
+    };
+
+    window.selectPlaylist = function(playlistId) {
+      appState.activePlaylistId = playlistId;
+      appState.activeNpcId = null;
+      appState.playlistStepIndex = 0;
+      appState.isSequencePlaying = false;
+      if (sequenceTimeoutId) clearTimeout(sequenceTimeoutId);
       if (appState.globalSearchQuery) {
         clearGlobalSearch();
       } else {
@@ -733,10 +961,27 @@
       if (appState.globalSearchQuery) {
         document.getElementById('empty-state').classList.add('hidden');
         document.getElementById('npc-workspace').classList.add('hidden');
+        document.getElementById('playlist-workspace').classList.add('hidden');
         document.getElementById('global-search-view').classList.remove('hidden');
         return;
       } else {
         document.getElementById('global-search-view').classList.add('hidden');
+      }
+
+      if (appState.activePlaylistId) {
+        const pl = appState.playlists.find(p => p.id === appState.activePlaylistId);
+        if (pl) {
+          document.getElementById('empty-state').classList.add('hidden');
+          document.getElementById('npc-workspace').classList.add('hidden');
+          document.getElementById('playlist-workspace').classList.remove('hidden');
+          document.getElementById('active-npc-breadcrumb').innerText = `Conversation Board / ${pl.name}`;
+          renderPlaylistWorkspace();
+          return;
+        } else {
+          appState.activePlaylistId = null;
+        }
+      } else {
+        document.getElementById('playlist-workspace').classList.add('hidden');
       }
 
       const npc = appState.npcs.find(n => n.id === appState.activeNpcId);
@@ -744,7 +989,7 @@
       if (!npc) {
         document.getElementById('empty-state').classList.remove('hidden');
         document.getElementById('npc-workspace').classList.add('hidden');
-        document.getElementById('active-npc-breadcrumb').innerText = 'Select an NPC to begin...';
+        document.getElementById('active-npc-breadcrumb').innerText = 'Select an NPC or Playlist to begin...';
         return;
       }
 
@@ -843,6 +1088,10 @@
 
           <!-- Utility Actions Row -->
           <div class="flex items-center justify-end gap-1.5 pt-1 border-t border-slate-700/60">
+            <button onclick="openAddToPlaylistModal('${line.id}')" class="bg-purple-500/20 hover:bg-purple-500/40 text-purple-300 font-semibold py-1.5 px-2.5 rounded-lg text-[11px] flex items-center justify-center gap-1 transition" title="Queue in a Conversation / Playlist">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+              Queue
+            </button>
             <button onclick="loadToWorkbench('${line.id}')" class="flex-1 bg-indigo-500/20 hover:bg-indigo-500/40 text-indigo-300 font-semibold py-1.5 px-2.5 rounded-lg text-[11px] flex items-center justify-center gap-1 transition" title="Load into Workbench to Re-Edit Filters">
               <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path></svg>
               Workbench
@@ -862,6 +1111,383 @@
       `;
       return card;
     }
+
+    // --- PLAYLISTS / CONVERSATION BOARDS LOGIC ---
+    window.promptNewPlaylist = function() {
+      openInputModal('New Conversation / Playlist Name', '', async (val) => {
+        if (!val || !userId) return;
+        const newId = generateId();
+        await setDoc(doc(db, 'artifacts', appId, 'users', userId, 'playlists', newId), {
+          id: newId,
+          name: val,
+          description: '',
+          items: [],
+          createdAt: Date.now()
+        });
+        selectPlaylist(newId);
+      });
+    };
+
+    window.renameActivePlaylist = function() {
+      const pl = appState.playlists.find(p => p.id === appState.activePlaylistId);
+      if (!pl) return;
+      openInputModal('Rename Conversation Board', pl.name, async (val) => {
+        if (!val || !userId || val === pl.name) return;
+        await setDoc(doc(db, 'artifacts', appId, 'users', userId, 'playlists', pl.id), { name: val }, { merge: true });
+      });
+    };
+
+    window.saveActivePlaylistDescription = async function(descVal) {
+      const pl = appState.playlists.find(p => p.id === appState.activePlaylistId);
+      if (!pl || !userId) return;
+      await setDoc(doc(db, 'artifacts', appId, 'users', userId, 'playlists', pl.id), { description: descVal.trim() }, { merge: true });
+    };
+
+    window.clearActivePlaylistQueue = function() {
+      const pl = appState.playlists.find(p => p.id === appState.activePlaylistId);
+      if (!pl || !userId) return;
+      showConfirm("Clear Conversation Queue", `Remove all queued lines from "${pl.name}"? (This will not delete the audio files from your NPCs).`, async () => {
+        stopCurrentAudio();
+        appState.playlistStepIndex = 0;
+        await setDoc(doc(db, 'artifacts', appId, 'users', userId, 'playlists', pl.id), { items: [] }, { merge: true });
+      });
+    };
+
+    window.deleteActivePlaylist = function() {
+      const pl = appState.playlists.find(p => p.id === appState.activePlaylistId);
+      if (!pl || !userId) return;
+      showConfirm("Delete Conversation Board", `Delete playlist "${pl.name}"? Your NPC audio files will remain untouched.`, async () => {
+        stopCurrentAudio();
+        const idToRemove = pl.id;
+        appState.activePlaylistId = null;
+        await deleteDoc(doc(db, 'artifacts', appId, 'users', userId, 'playlists', idToRemove));
+        renderSidebar();
+        renderWorkspace();
+      });
+    };
+
+    window.openAddToPlaylistModal = function(lineId) {
+      const line = appState.lines.find(l => l.id === lineId);
+      if (!line) return;
+      pendingLineIdForPlaylist = lineId;
+
+      const npc = appState.npcs.find(n => n.id === line.npcId);
+      document.getElementById('add-to-playlist-line-preview').innerText = `${npc ? npc.name + ': ' : ''}"${line.text}"`;
+      document.getElementById('quick-new-playlist-input').value = '';
+
+      const listEl = document.getElementById('add-to-playlist-list');
+      listEl.innerHTML = '';
+
+      if (appState.playlists.length === 0) {
+        listEl.innerHTML = `<div class="text-xs text-slate-500 italic py-2">No playlists created yet. Enter a title below to create your first one!</div>`;
+      } else {
+        appState.playlists.forEach(pl => {
+          const count = Array.isArray(pl.items) ? pl.items.length : 0;
+          const btn = document.createElement('button');
+          btn.className = 'w-full text-left p-2.5 rounded-xl bg-slate-900 hover:bg-purple-500/20 border border-slate-700 hover:border-purple-500/40 transition flex items-center justify-between text-xs text-slate-200';
+          btn.innerHTML = `
+            <span class="font-semibold truncate">${escapeHtml(pl.name)}</span>
+            <span class="text-[10px] font-mono text-purple-300 bg-purple-500/20 px-2 py-0.5 rounded">${count} lines · + Queue</span>
+          `;
+          btn.onclick = async () => {
+            await appendLineToPlaylist(pl.id, lineId);
+            closeModal('add-to-playlist-modal');
+          };
+          listEl.appendChild(btn);
+        });
+      }
+
+      document.getElementById('add-to-playlist-modal').classList.remove('hidden');
+    };
+
+    window.createAndAddLineToPlaylist = async function() {
+      const nameInput = document.getElementById('quick-new-playlist-input');
+      const title = nameInput.value.trim();
+      if (!title || !userId || !pendingLineIdForPlaylist) return;
+
+      const newId = generateId();
+      await setDoc(doc(db, 'artifacts', appId, 'users', userId, 'playlists', newId), {
+        id: newId,
+        name: title,
+        description: '',
+        items: [{ itemId: generateId(), lineId: pendingLineIdForPlaylist }],
+        createdAt: Date.now()
+      });
+
+      closeModal('add-to-playlist-modal');
+    };
+
+    window.appendLineToPlaylist = async function(playlistId, lineId) {
+      if (!userId) return;
+      const pl = appState.playlists.find(p => p.id === playlistId);
+      if (!pl) return;
+      const items = Array.isArray(pl.items) ? [...pl.items] : [];
+      items.push({ itemId: generateId(), lineId: lineId });
+      await setDoc(doc(db, 'artifacts', appId, 'users', userId, 'playlists', playlistId), { items }, { merge: true });
+    };
+
+    window.openPlaylistLinePicker = function() {
+      const npcSelect = document.getElementById('picker-npc-filter');
+      npcSelect.innerHTML = `<option value="all">All NPCs in Library</option>`;
+      appState.npcs.forEach(npc => {
+        const folderPath = getFolderPath(npc.folderId);
+        const opt = document.createElement('option');
+        opt.value = npc.id;
+        opt.textContent = folderPath ? `${folderPath} / ${npc.name}` : npc.name;
+        npcSelect.appendChild(opt);
+      });
+      document.getElementById('picker-search-input').value = '';
+      renderPlaylistPickerList();
+      document.getElementById('playlist-picker-modal').classList.remove('hidden');
+    };
+
+    window.renderPlaylistPickerList = function() {
+      const npcFilter = document.getElementById('picker-npc-filter').value;
+      const query = document.getElementById('picker-search-input').value.trim().toLowerCase();
+      const container = document.getElementById('playlist-picker-results');
+      if (!container) return;
+      container.innerHTML = '';
+
+      const matches = appState.lines.filter(l => {
+        if (npcFilter !== 'all' && l.npcId !== npcFilter) return false;
+        if (!query) return true;
+        const npc = appState.npcs.find(n => n.id === l.npcId);
+        const npcName = npc ? npc.name.toLowerCase() : '';
+        return (l.text && l.text.toLowerCase().includes(query)) ||
+               (l.description && l.description.toLowerCase().includes(query)) ||
+               npcName.includes(query);
+      });
+
+      if (matches.length === 0) {
+        container.innerHTML = `<div class="text-center p-6 text-slate-500 text-xs border border-dashed border-slate-800 rounded-xl">No matching audio lines found.</div>`;
+        return;
+      }
+
+      matches.forEach(line => {
+        const npc = appState.npcs.find(n => n.id === line.npcId);
+        const row = document.createElement('div');
+        row.className = 'p-3 rounded-xl bg-slate-900/90 border border-slate-800 flex items-center justify-between gap-3 hover:border-slate-700 transition';
+        row.innerHTML = `
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-2 mb-0.5">
+              <span class="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-sky-500/20 text-sky-300">${escapeHtml(npc ? npc.name : 'Unknown NPC')}</span>
+              ${line.description ? `<span class="text-[11px] text-slate-400 truncate">— ${escapeHtml(line.description)}</span>` : ''}
+            </div>
+            <p class="text-xs font-semibold text-slate-100 truncate">"${escapeHtml(line.text)}"</p>
+          </div>
+          <div class="flex items-center gap-1.5 flex-shrink-0">
+            <button onclick="handleCardPlayPause('${line.id}')" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-sky-400 text-xs font-semibold">Preview</button>
+            <button onclick="appendLineToPlaylist('${appState.activePlaylistId}', '${line.id}')" class="px-3 py-1.5 rounded-lg bg-purple-500 hover:bg-purple-400 text-slate-950 text-xs font-bold">+ Queue</button>
+          </div>
+        `;
+        container.appendChild(row);
+      });
+    };
+
+    window.movePlaylistItem = async function(index, direction) {
+      const pl = appState.playlists.find(p => p.id === appState.activePlaylistId);
+      if (!pl || !userId) return;
+      const items = Array.isArray(pl.items) ? [...pl.items] : [];
+      const targetIndex = index + direction;
+      if (targetIndex < 0 || targetIndex >= items.length) return;
+      const temp = items[index];
+      items[index] = items[targetIndex];
+      items[targetIndex] = temp;
+      await setDoc(doc(db, 'artifacts', appId, 'users', userId, 'playlists', pl.id), { items }, { merge: true });
+    };
+
+    window.removePlaylistItem = async function(index) {
+      const pl = appState.playlists.find(p => p.id === appState.activePlaylistId);
+      if (!pl || !userId) return;
+      const items = Array.isArray(pl.items) ? [...pl.items] : [];
+      items.splice(index, 1);
+      if (appState.playlistStepIndex >= items.length) {
+        appState.playlistStepIndex = Math.max(0, items.length - 1);
+      }
+      await setDoc(doc(db, 'artifacts', appId, 'users', userId, 'playlists', pl.id), { items }, { merge: true });
+    };
+
+    window.resetPlaylistPointer = function() {
+      appState.playlistStepIndex = 0;
+      appState.isSequencePlaying = false;
+      if (sequenceTimeoutId) clearTimeout(sequenceTimeoutId);
+      renderPlaylistWorkspace();
+    };
+
+    window.playNextStepInPlaylist = function() {
+      const pl = appState.playlists.find(p => p.id === appState.activePlaylistId);
+      if (!pl || !Array.isArray(pl.items) || pl.items.length === 0) return;
+
+      appState.isSequencePlaying = false;
+      if (sequenceTimeoutId) clearTimeout(sequenceTimeoutId);
+
+      if (appState.playlistStepIndex >= pl.items.length) {
+        appState.playlistStepIndex = 0;
+      }
+
+      const currentIdx = appState.playlistStepIndex;
+      const entry = pl.items[currentIdx];
+      const line = appState.lines.find(l => l.id === entry.lineId);
+
+      // Advance pointer for the next click
+      appState.playlistStepIndex = (currentIdx + 1) % pl.items.length;
+
+      if (line) {
+        const npc = appState.npcs.find(n => n.id === line.npcId);
+        playAudio(line.blobUrl, {
+          title: `#${currentIdx + 1}: ${line.text}`,
+          source: npc ? `${pl.name} • ${npc.name}` : pl.name,
+          lineId: line.id,
+          playlistItemIndex: currentIdx
+        });
+      }
+      renderPlaylistWorkspace();
+    };
+
+    window.startPlaylistSequence = function(startIndex = 0) {
+      const pl = appState.playlists.find(p => p.id === appState.activePlaylistId);
+      if (!pl || !Array.isArray(pl.items) || pl.items.length === 0) return;
+
+      if (sequenceTimeoutId) clearTimeout(sequenceTimeoutId);
+      appState.isSequencePlaying = true;
+      playSequenceStep(startIndex);
+    };
+
+    function playSequenceStep(index) {
+      const pl = appState.playlists.find(p => p.id === appState.activePlaylistId);
+      if (!pl || !appState.isSequencePlaying || !Array.isArray(pl.items) || index >= pl.items.length) {
+        appState.isSequencePlaying = false;
+        appState.playlistStepIndex = 0;
+        renderPlaylistWorkspace();
+        return;
+      }
+
+      appState.playlistStepIndex = index;
+      const entry = pl.items[index];
+      const line = appState.lines.find(l => l.id === entry.lineId);
+
+      if (!line) {
+        playSequenceStep(index + 1);
+        return;
+      }
+
+      const npc = appState.npcs.find(n => n.id === line.npcId);
+      const gapMs = parseInt(document.getElementById('playlist-gap-select')?.value || '800', 10);
+
+      playAudio(line.blobUrl, {
+        title: `#${index + 1}: ${line.text}`,
+        source: npc ? `Sequence • ${npc.name}` : 'Sequence Playback',
+        lineId: line.id,
+        playlistItemIndex: index,
+        onEndedCallback: () => {
+          if (!appState.isSequencePlaying) return;
+          if (index + 1 < pl.items.length) {
+            sequenceTimeoutId = setTimeout(() => {
+              playSequenceStep(index + 1);
+            }, gapMs);
+          } else {
+            appState.isSequencePlaying = false;
+            appState.playlistStepIndex = 0;
+            renderPlaylistWorkspace();
+          }
+        }
+      });
+
+      renderPlaylistWorkspace();
+    }
+
+    window.renderPlaylistWorkspace = function() {
+      const pl = appState.playlists.find(p => p.id === appState.activePlaylistId);
+      if (!pl) return;
+
+      document.getElementById('playlist-title-heading').innerText = pl.name;
+      document.getElementById('playlist-desc-input').value = pl.description || '';
+
+      const items = Array.isArray(pl.items) ? pl.items : [];
+      if (appState.playlistStepIndex >= items.length) {
+        appState.playlistStepIndex = 0;
+      }
+
+      const stepBtnText = document.getElementById('playlist-step-btn-text');
+      if (stepBtnText) {
+        stepBtnText.innerText = items.length > 0 ? `Play Next Cue (#${appState.playlistStepIndex + 1})` : 'Play Next Cue';
+      }
+
+      const container = document.getElementById('playlist-items-container');
+      if (!container) return;
+      container.innerHTML = '';
+
+      if (items.length === 0) {
+        container.innerHTML = `
+          <div class="text-center p-10 text-slate-400 text-sm border border-dashed border-slate-700 rounded-2xl space-y-3">
+            <p>This conversation board is empty.</p>
+            <p class="text-xs text-slate-500">Click <strong>"Add Dialogue to Queue"</strong> above, or click the <strong>"Queue"</strong> button on any audio card across your NPCs to build a multi-character scene!</p>
+          </div>
+        `;
+        return;
+      }
+
+      items.forEach((entry, idx) => {
+        const line = appState.lines.find(l => l.id === entry.lineId);
+        const npc = line ? appState.npcs.find(n => n.id === line.npcId) : null;
+        const isCurrentPointer = idx === appState.playlistStepIndex;
+        const isCurrentlyPlaying = currentAudio && currentAudioMeta.playlistItemIndex === idx;
+
+        const row = document.createElement('div');
+        row.className = `p-4 rounded-xl border transition flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
+          isCurrentlyPlaying
+            ? 'bg-emerald-950/30 border-emerald-400 ring-1 ring-emerald-400/40'
+            : isCurrentPointer
+              ? 'bg-slate-800/80 border-sky-400/70'
+              : 'bg-slate-900/70 border-slate-800'
+        }`;
+
+        if (!line) {
+          row.innerHTML = `
+            <div class="text-xs text-rose-400 italic">Line #${idx + 1} was deleted from the library.</div>
+            <button onclick="removePlaylistItem(${idx})" class="px-2.5 py-1 rounded bg-rose-500/20 text-rose-300 text-xs">Remove</button>
+          `;
+          container.appendChild(row);
+          return;
+        }
+
+        const portraitUrl = npc && npc.portraitUrl ? npc.portraitUrl : 'https://placehold.co/80x80/1e293b/38bdf8?text=?';
+
+        row.innerHTML = `
+          <div class="flex items-start sm:items-center gap-3.5 min-w-0 flex-1">
+            <div class="flex flex-col items-center gap-1 flex-shrink-0">
+              <span class="text-xs font-mono font-extrabold px-2 py-0.5 rounded ${isCurrentPointer ? 'bg-sky-400 text-slate-950' : 'bg-slate-800 text-slate-400'}">#${idx + 1}</span>
+              ${isCurrentPointer ? `<span class="text-[9px] font-mono uppercase text-sky-400 tracking-tighter">Next Cue</span>` : ''}
+            </div>
+
+            <img src="${escapeHtml(portraitUrl)}" class="w-11 h-11 rounded-xl object-cover border border-slate-700 flex-shrink-0 bg-slate-800" onerror="this.src='https://placehold.co/80x80/1e293b/38bdf8?text=?'">
+
+            <div class="min-w-0 flex-1">
+              <div class="flex flex-wrap items-center gap-2 mb-1">
+                <button onclick="selectNpc('${npc ? npc.id : ''}')" class="text-xs font-extrabold text-purple-300 hover:text-purple-200 uppercase tracking-wide flex items-center gap-1">
+                  ${escapeHtml(npc ? npc.name : 'Unknown NPC')}
+                </button>
+                ${line.description ? `<span class="text-xs text-slate-400 italic">(${escapeHtml(line.description)})</span>` : ''}
+              </div>
+              <p class="text-sm font-semibold text-slate-100 break-words">"${escapeHtml(line.text)}"</p>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-1.5 flex-shrink-0">
+            <button onclick="appState.playlistStepIndex = ${idx}; playNextStepInPlaylist();" class="px-3 py-1.5 rounded-lg bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs flex items-center gap-1 transition" title="Play Only This Cue & Advance Pointer">
+              ▶ Play Cue
+            </button>
+            <button onclick="startPlaylistSequence(${idx})" class="px-2.5 py-1.5 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 font-semibold text-xs border border-emerald-500/30 transition" title="Play Sequence Starting From Here">
+              ▶▶ From Here
+            </button>
+            <button onclick="movePlaylistItem(${idx}, -1)" ${idx === 0 ? 'disabled' : ''} class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-slate-300 transition" title="Move Up">↑</button>
+            <button onclick="movePlaylistItem(${idx}, 1)" ${idx === items.length - 1 ? 'disabled' : ''} class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 disabled:opacity-30 text-slate-300 transition" title="Move Down">↓</button>
+            <button onclick="removePlaylistItem(${idx})" class="p-1.5 rounded-lg bg-rose-500/20 hover:bg-rose-500/40 text-rose-400 transition" title="Remove from Queue">✕</button>
+          </div>
+        `;
+        container.appendChild(row);
+      });
+    };
 
     window.renderSoundboard = function() {
       const npc = appState.npcs.find(n => n.id === appState.activeNpcId);
@@ -1160,6 +1786,7 @@
 
       renderSoundboard();
       if (appState.globalSearchQuery) renderGlobalSearchResults();
+      if (appState.activePlaylistId) renderPlaylistWorkspace();
     }
 
     window.playAudio = function(url, meta = {}) {
@@ -1173,7 +1800,9 @@
         url: url,
         title: meta.title || 'Audio Clip',
         source: meta.source || 'Audio Player',
-        lineId: meta.lineId || null
+        lineId: meta.lineId || null,
+        playlistItemIndex: typeof meta.playlistItemIndex === 'number' ? meta.playlistItemIndex : null,
+        onEndedCallback: meta.onEndedCallback || null
       };
 
       currentAudio.addEventListener('loadedmetadata', () => {
@@ -1194,7 +1823,9 @@
         if (currentAudio) {
           currentAudio.currentTime = 0;
         }
+        const cb = currentAudioMeta.onEndedCallback;
         updateTransportUI();
+        if (typeof cb === 'function') cb();
       });
 
       currentAudio.play();
@@ -1219,11 +1850,16 @@
     };
 
     window.stopCurrentAudio = function() {
-      if (!currentAudio) return;
+      appState.isSequencePlaying = false;
+      if (sequenceTimeoutId) clearTimeout(sequenceTimeoutId);
+      if (!currentAudio) {
+        updateTransportUI();
+        return;
+      }
       currentAudio.pause();
       currentAudio.currentTime = 0;
       currentAudio = null;
-      currentAudioMeta = { url: null, title: '', source: '', lineId: null };
+      currentAudioMeta = { url: null, title: '', source: '', lineId: null, playlistItemIndex: null, onEndedCallback: null };
       document.getElementById('transport-scrubber').value = 0;
       document.getElementById('transport-time-current').innerText = '0:00';
       document.getElementById('transport-time-total').innerText = '0:00';
@@ -2027,6 +2663,15 @@
       updateApiKeyBadge();
       window.closeModal('api-modal');
     };
+
+    // Enforce anti-autofill attributes across all inputs and textareas
+    document.querySelectorAll('input:not([type="password"]), textarea').forEach(el => {
+      el.setAttribute('autocomplete', 'off');
+      el.setAttribute('autocorrect', 'off');
+      el.setAttribute('data-lpignore', 'true');
+      el.setAttribute('data-1p-ignore', 'true');
+      el.setAttribute('data-form-type', 'other');
+    });
 
     // Initialize
     updateApiKeyBadge();
